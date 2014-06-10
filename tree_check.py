@@ -4,20 +4,23 @@ __author__ = 'tal'
 import sys
 import os
 import textwrap
+
 GIT = False
 DIR = '.'
 
+
 class color:
-   PURPLE = '\033[95m'
-   CYAN = '\033[96m'
-   DARKCYAN = '\033[36m'
-   BLUE = '\033[94m'
-   GREEN = '\033[92m'
-   YELLOW = '\033[93m'
-   RED = '\033[91m'
-   BOLD = '\033[1m'
-   UNDERLINE = '\033[4m'
-   END = '\033[0m'
+    PURPLE = '\033[95m'
+    CYAN = '\033[96m'
+    DARKCYAN = '\033[36m'
+    BLUE = '\033[94m'
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+    END = '\033[0m'
+
 
 def usage():
     print color.BOLD + "NAME" + color.END
@@ -35,10 +38,13 @@ def usage():
     print '\tin any way you like.'
     print
     print '\t' + color.BOLD + '-f OUTPUT_FOLDER' + color.END
-    print '\t\t' + '\n\t\t'.join(textwrap.wrap('Output folder name. Can be used more than once. All output is stored in the folder specified by the last -f statement used. If -f is omitted, output is stored in the current directory. To specify the current directory explicitly, use "-f ." See examples for details.', 60))
+    print '\t\t' + '\n\t\t'.join(textwrap.wrap(
+        'Output folder name. Can be used more than once. All output is stored in the folder specified by the last -f statement used. If -f is omitted, output is stored in the current directory. To specify the current directory explicitly, use "-f ." See examples for details.',
+        60))
     print
     print '\t' + color.BOLD + '-g' + color.END
-    print '\t\t' + '\n\t\t'.join(textwrap.wrap('Enable git. After generating output, runs "git add ." and "git commit -m $(date)" on the output folder.', 60))
+    print '\t\t' + '\n\t\t'.join(textwrap.wrap(
+        'Enable git. After generating output, runs "git add ." and "git commit -m $(date)" on the output folder.', 60))
     print
     print '\t' + color.BOLD + '-h, --help' + color.END
     print '\t\t' + '\n\t\t'.join(textwrap.wrap('Display this help and exit', 60))
@@ -137,7 +143,8 @@ for i in range(1, len(sys.argv)):
         DIR = sys.argv[i]
         continue
 
-    exit_code = os.system("tree --du -h --charset=ANSII -F '%s' > '%s/%s'" % (sys.argv[i], DIR, os.path.basename(sys.argv[i].rstrip("/"))))
+    exit_code = os.system("tree --du -h --charset=ANSII -F '%s' > '%s/%s'" % (
+                sys.argv[i], DIR, os.path.basename(sys.argv[i].rstrip("/"))))
     if exit_code > 0:
         print "Something went wrong!"
         exit(1)
@@ -156,5 +163,4 @@ if GIT:
 
     os.system('git add .')
     os.system('git commit -m "$(date)"')
-    #The line below was good in theory, but didn't work in practice
-    #os.system('git commit -m "$(git diff --cached)"')
+
