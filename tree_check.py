@@ -9,7 +9,7 @@ GIT = False
 DIR = '.'
 
 
-class color:
+class Color:
     PURPLE = '\033[95m'
     CYAN = '\033[96m'
     DARKCYAN = '\033[36m'
@@ -23,10 +23,10 @@ class color:
 
 
 def usage():
-    print color.BOLD + "NAME" + color.END
+    print Color.BOLD + "NAME" + Color.END
     print '\t%s - do a tree of specified folders' % os.path.basename(sys.argv[0])
     print ''
-    print color.BOLD + "DESCRIPTION" + color.END
+    print Color.BOLD + "DESCRIPTION" + Color.END
     print '\tRun the "tree" command in a way that:'
     print '\t    * Uses the ANSII standard to make it easily grepable'
     print '\t    * Shows dir and file sizes in a human readable way'
@@ -37,23 +37,23 @@ def usage():
     print '\t%s can also create folders to store the output' % os.path.basename(sys.argv[0])
     print '\tin any way you like.'
     print
-    print '\t' + color.BOLD + '-f OUTPUT_FOLDER' + color.END
+    print '\t' + Color.BOLD + '-f OUTPUT_FOLDER' + Color.END
     print '\t\t' + '\n\t\t'.join(textwrap.wrap(
         'Output folder name. Can be used more than once. All output is stored in the folder specified by the last -f statement used. If -f is omitted, output is stored in the current directory. To specify the current directory explicitly, use "-f ." See examples for details.',
         60))
     print
-    print '\t' + color.BOLD + '-g' + color.END
+    print '\t' + Color.BOLD + '-g' + Color.END
     print '\t\t' + '\n\t\t'.join(textwrap.wrap(
         'Enable git. After generating output, runs "git add ." and "git commit -m $(date)" on the output folder.', 60))
     print
-    print '\t' + color.BOLD + '-h, --help' + color.END
+    print '\t' + Color.BOLD + '-h, --help' + Color.END
     print '\t\t' + '\n\t\t'.join(textwrap.wrap('Display this help and exit', 60))
     print
-    print '\t' + color.BOLD + "Exit status:" + color.END
+    print '\t' + Color.BOLD + "Exit status:" + Color.END
     print '\t    0  if OK'
     print '\t    1  if Errors caused an early exit'
     print
-    print color.BOLD + "EXAMPLES" + color.END
+    print Color.BOLD + "EXAMPLES" + Color.END
     print '\tRun tree on /etc, and put the output into the current folder:'
     print '\t    $ %s /etc' % os.path.basename(sys.argv[0])
     print
@@ -74,13 +74,13 @@ def usage():
     print '\tfolder too.'
     print '\t    $ %s /etc -f PC1 /var /usr -f . /home' % os.path.basename(sys.argv[0])
     print
-    print color.BOLD + "AUTHOR" + color.END
+    print Color.BOLD + "AUTHOR" + Color.END
     print '\tWritten by Tal.'
     print
-    print color.BOLD + "REPORTING BUGS" + color.END
+    print Color.BOLD + "REPORTING BUGS" + Color.END
     print '\tReport %s bugs to Tal\'s GitHub repo.' % os.path.basename(sys.argv[0])
     print
-    print color.BOLD + "LICENSE" + color.END
+    print Color.BOLD + "LICENSE" + Color.END
     print '\tGPLv2 - http://www.gnu.org/licenses/gpl-2.0.html'
     print
 
