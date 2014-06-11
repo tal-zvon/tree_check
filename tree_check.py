@@ -4,6 +4,7 @@ __author__ = 'tal'
 import sys
 import os
 import textwrap
+import signal
 
 GIT = False
 DIR = '.'
@@ -20,6 +21,11 @@ class Color:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
     END = '\033[0m'
+
+
+def signal_handler(signal, frame):
+    print Color.END
+    exit(0)
 
 
 def usage():
@@ -83,6 +89,9 @@ def usage():
     print Color.BOLD + "LICENSE" + Color.END
     print '\tGPLv2 - http://www.gnu.org/licenses/gpl-2.0.html'
     print
+
+#If user hits Ctrl+C, make sure the terminal colors are back to normal
+signal.signal(signal.SIGINT, signal_handler)
 
 #If there are no arguments, show usage and exit
 if len(sys.argv) == 1:
