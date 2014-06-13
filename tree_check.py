@@ -146,11 +146,11 @@ for i in range(1, len(sys.argv)):
             print "'-f %s' cannot be the last argument!\n" % sys.argv[i + 1]
             exit(1)
 
-        #Check if next argument starts with a /
-        if sys.argv[i + 1][:1] == "/":
+        #Check if next argument starts with a /, or a ~
+        if sys.argv[i + 1][:1] == "/" or sys.argv[i + 1][:1] == "~":
             GIT_REQ = True
             #Check if dirname of the following argument exists
-            if not os.path.isdir(os.path.dirname(sys.argv[i + 1])):
+            if not os.path.isdir(os.path.dirname(os.path.expanduser(sys.argv[i + 1]))):
                 print "You are using an absolute path. '%s' must exist!" % os.path.dirname(sys.argv[i + 1])
                 exit(1)
 
@@ -158,7 +158,7 @@ for i in range(1, len(sys.argv)):
         continue
 
     #Check if the folder exists
-    if not os.path.isdir(sys.argv[i]):
+    if not os.path.isdir(os.path.expanduser(sys.argv[i])):
         #Check if '-f' was the previous argument
         if sys.argv[i - 1] != '-f':
             print "'%s' is not a valid folder!" % sys.argv[i]
@@ -182,13 +182,13 @@ for i in range(1, len(sys.argv)):
 
     #If the previous argument was '-f', make a folder
     if sys.argv[i - 1] == "-f":
-        if not os.path.exists(sys.argv[i]):
-            os.makedirs(sys.argv[i])
-        DIR = sys.argv[i]
+        if not os.path.exists(os.path.expanduser(sys.argv[i])):
+            os.makedirs(os.path.expanduser(sys.argv[i]))
+        DIR = os.path.expanduser(sys.argv[i])
         continue
 
     exit_code = os.system("tree --du -h --charset=ANSII -F '%s' > '%s/%s'" % (
-                sys.argv[i], DIR, os.path.basename(sys.argv[i].rstrip("/"))))
+                os.path.expanduser(sys.argv[i]), DIR, os.path.basename(sys.argv[i].rstrip("/"))))
     if exit_code > 0:
         print "Something went wrong!"
         exit(1)
@@ -196,19 +196,19 @@ for i in range(1, len(sys.argv)):
 #Check if git is enabled
 if GIT:
     #Check if GIT_ROOT is an actual folder
-    if not os.path.isdir(GIT_ROOT):
+    if not os.path.isdir(os.path.expanduser(GIT_ROOT)):
         print "'%s' does not exist! Check your -g= option" % GIT_ROOT
         exit(1)
     #Check if current dir is a git repo
-    if os.system("cd '%s'; git status >/dev/null 2>&1" % GIT_ROOT) != 0:
+    if os.system("cd '%s'; git status >/dev/null 2>&1" % os.path.expanduser(GIT_ROOT)) != 0:
         #Create a git repo in the current folder
-        exit_code = os.system("cd '%s'; git init" % GIT_ROOT)
+        exit_code = os.system("cd '%s'; git init" % os.path.expanduser(GIT_ROOT))
 
         #If it failed to create, exit
         if exit_code > 0:
             print "Something went wrong when creating a git repo."
             exit(1)
 
-    os.system('cd "%s"; git add .' % GIT_ROOT)
-    os.system('cd "%s"; git commit -m "$(date)"' % GIT_ROOT)
+    os.system('cd "%s"; git add .' % os.path.expanduser(GIT_ROOT))
+    os.system('cd "%s"; git commit -m "$(date)"' % os.path.expanduser(GIT_ROOT))
 
