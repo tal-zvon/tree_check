@@ -30,7 +30,7 @@ output looks like this:
 
 	 145K used in 0 directories, 10 files
 
-Examples:
+Example of grep commands on the output:
 
 Show only top level files and folders:
 
