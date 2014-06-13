@@ -139,13 +139,11 @@ for i in range(1, len(sys.argv)):
         #Check if this is the last argument
         if i == (len(sys.argv) - 1):
             print "'-f' cannot be the last argument!\n"
-            usage()
             exit(1)
 
         #Check if this is the second last argument
         if i == (len(sys.argv) - 2):
             print "'-f %s' cannot be the last argument!\n" % sys.argv[i + 1]
-            usage()
             exit(1)
 
         #Check if next argument starts with a /
