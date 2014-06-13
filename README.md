@@ -2,7 +2,7 @@ tree_check
 ==========
 
 I have had 2 NAS (Network Attached Storage) devices for quite a while now,
-and despite them both running RAID 5, there's always a chance that a until
+and despite them both running RAID 5, there's always a chance that a unit
 will suffer a catastrophic failure one of these days, and all its data will
 be gone. I figured it might be nice if I had something keeping track of what
 files/folders were on them both, so that if one of them dies, I would know
