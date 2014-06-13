@@ -7,6 +7,10 @@ import textwrap
 import signal
 
 GIT = False
+#The root of the git repo
+GIT_ROOT = '.'
+#True if git root must be specified explicitly
+GIT_REQ = False
 DIR = '.'
 
 
@@ -48,9 +52,9 @@ def usage():
         'Output folder name. Can be used more than once. All output is stored in the folder specified by the last -f statement used. If -f is omitted, output is stored in the current directory. To specify the current directory explicitly, use "-f ." See examples for details.',
         60))
     print
-    print '\t' + Color.BOLD + '-g' + Color.END
+    print '\t' + Color.BOLD + '-g' + Color.END + '[=GIT_ROOT_DIR]'
     print '\t\t' + '\n\t\t'.join(textwrap.wrap(
-        'Enable git. After generating output, runs "git add ." and "git commit -m $(date)" on the output folder.', 60))
+        'Enable git. After generating output, runs "git add ." and "git commit -m $(date)" on the output folder. The GIT_ROOT_FOLDER specifies where the root of the git repo will be. When using relative paths for -f options, the GIT_ROOT_FOLDER is assumed to be the CWD if the =GIT_ROOT_FOLDER is omitted. When using absolute paths for -f, the GIT_ROOT_FOLDER MUST be specified.', 60))
     print
     print '\t' + Color.BOLD + '-h, --help' + Color.END
     print '\t\t' + '\n\t\t'.join(textwrap.wrap('Display this help and exit', 60))
@@ -80,6 +84,12 @@ def usage():
     print '\tfolder too.'
     print '\t    $ %s /etc -f PC1 /var /usr -f . /home' % os.path.basename(sys.argv[0])
     print
+    print '\tRun tree on /etc, and make the output folder\n\t"/home/user/Documents/test folder/Machine 1".'
+    print '\tRun tree on /var, and make the output folder\n\t"/home/user/Documents/test folder/Machine 2".'
+    print '\tSet the git repo root folder to "/home/user/Documents/test folder/",\n\tand make a git snapshot.'
+    print '\tNote: In this case, the "/home/user/Documents/test folder/"\n\tdir must already exist'
+    print '\t    $ %s -f "/home/user/Documents/test folder/Machine 1" \\\n\t\t/etc -f "/home/user/Documents/test folder/Machine 2" /var \\\n\t\t"-g=/home/user/Documents/test folder"' % os.path.basename(sys.argv[0])
+    print
     print Color.BOLD + "AUTHOR" + Color.END
     print '\tWritten by Tal.'
     print
@@ -102,7 +112,20 @@ if len(sys.argv) == 1:
 for i in range(1, len(sys.argv)):
 
     #If one of the arguments is '-g', enable git
-    if sys.argv[i] == "-g":
+    if sys.argv[i][:2] == "-g":
+        if len(sys.argv[i]) > 2:
+            #Make sure the extended version of -g (-g=) is formatted correctly
+            if len(sys.argv[i]) == 3:
+                print "Invalid formatting: '%s'" % sys.argv[i]
+                exit(1)
+            elif len(sys.argv[i]) > 3:
+                if sys.argv[i][2] != "=":
+                    print "Invalid formatting: '%s'" % sys.argv[i]
+                    exit(1)
+
+            #Assign root directory for git to GIT_ROOT
+            GIT_ROOT = sys.argv[i][3:]
+
         GIT = True
         continue
 
@@ -125,6 +148,14 @@ for i in range(1, len(sys.argv)):
             usage()
             exit(1)
 
+        #Check if next argument starts with a /
+        if sys.argv[i + 1][:1] == "/":
+            GIT_REQ = True
+            #Check if dirname of the following argument exists
+            if not os.path.isdir(os.path.dirname(sys.argv[i + 1])):
+                print "You are using an absolute path. '%s' must exist!" % os.path.dirname(sys.argv[i + 1])
+                exit(1)
+
         #Skip to the next arg
         continue
 
@@ -135,6 +166,12 @@ for i in range(1, len(sys.argv)):
             print "'%s' is not a valid folder!" % sys.argv[i]
             exit(1)
 
+#Check if git is required, and if it was specified
+if GIT_REQ and GIT_ROOT == '.':
+    print "You are using absolute paths for your output"
+    print "You must specify the root of your git repo explicitly with '-g=/some_folder'"
+    exit(1)
+
 #For every argument, run tree on it and send the output where it needs to go
 for i in range(1, len(sys.argv)):
     #If argument is '-f', skip it
@@ -142,7 +179,7 @@ for i in range(1, len(sys.argv)):
         continue
 
     #If argument is '-g', skip it
-    if sys.argv[i] == "-g":
+    if sys.argv[i][:2] == "-g":
         continue
 
     #If the previous argument was '-f', make a folder
@@ -160,16 +197,20 @@ for i in range(1, len(sys.argv)):
 
 #Check if git is enabled
 if GIT:
+    #Check if GIT_ROOT is an actual folder
+    if not os.path.isdir(GIT_ROOT):
+        print "'%s' does not exist! Check your -g= option" % GIT_ROOT
+        exit(1)
     #Check if current dir is a git repo
-    if os.system("git status >/dev/null 2>&1") != 0:
+    if os.system("cd '%s'; git status >/dev/null 2>&1" % GIT_ROOT) != 0:
         #Create a git repo in the current folder
-        exit_code = os.system("git init")
+        exit_code = os.system("cd '%s'; git init" % GIT_ROOT)
 
         #If it failed to create, exit
         if exit_code > 0:
             print "Something went wrong when creating a git repo."
             exit(1)
 
-    os.system('git add .')
-    os.system('git commit -m "$(date)"')
+    os.system('cd "%s"; git add .' % GIT_ROOT)
+    os.system('cd "%s"; git commit -m "$(date)"' % GIT_ROOT)
 
