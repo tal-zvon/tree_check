@@ -210,5 +210,5 @@ if GIT:
             exit(1)
 
     os.system('cd "%s"; git add .' % os.path.expanduser(GIT_ROOT))
-    os.system('cd "%s"; git commit -m "$(date)"' % os.path.expanduser(GIT_ROOT))
+    os.system('cd "%s"; git commit -m "$(date)" >/dev/null' % os.path.expanduser(GIT_ROOT))
 
