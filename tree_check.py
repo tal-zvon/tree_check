@@ -12,6 +12,8 @@ GIT_ROOT = '.'
 #True if git root must be specified explicitly
 GIT_REQ = False
 DIR = '.'
+#True if we want to ignore non-existent folders (skip them)
+IGNORE = False
 
 
 class Color:
@@ -58,6 +60,9 @@ def usage():
     print
     print '\t' + Color.BOLD + '-h, --help' + Color.END
     print '\t\t' + '\n\t\t'.join(textwrap.wrap('Display this help and exit', 60))
+    print
+    print '\t' + Color.BOLD + '-I' + Color.END
+    print '\t\t' + '\n\t\t'.join(textwrap.wrap('Ignore empty and non-existent directories. Useful when dealing with mounted filesystems that may be unmounted once in a while when %s is running.' % os.path.basename(sys.argv[0]), 60))
     print
     print '\t' + Color.BOLD + "Exit status:" + Color.END
     print '\t    0  if OK'
@@ -108,6 +113,12 @@ if len(sys.argv) == 1:
     usage()
     exit(0)
 
+#Check for '-I' argument
+for i in range(1, len(sys.argv)):
+    if sys.argv[i] == "-I":
+        IGNORE = True
+        break
+
 #Check for invalid arguments
 for i in range(1, len(sys.argv)):
 
@@ -133,6 +144,10 @@ for i in range(1, len(sys.argv)):
     if sys.argv[i] == "-h" or sys.argv[i] == "--help":
         usage()
         exit(0)
+
+    #If the argument is "-I", ignore it - we already set the IGNORE flag
+    if sys.argv[i] == "-I":
+        continue
 
     #If one of the arguments is '-f', make sure it's not the last argument
     if sys.argv[i] == "-f":
@@ -161,8 +176,10 @@ for i in range(1, len(sys.argv)):
     if not os.path.isdir(os.path.expanduser(sys.argv[i])):
         #Check if '-f' was the previous argument
         if sys.argv[i - 1] != '-f':
-            print "'%s' is not a valid folder!" % sys.argv[i]
-            exit(1)
+            #Check if we are ignoring non-existent folders
+            if not IGNORE:
+                print "'%s' is not a valid folder!" % sys.argv[i]
+                exit(1)
 
 #Check if git is required, and if it was specified
 if GIT_REQ and GIT_ROOT == '.':
@@ -180,12 +197,24 @@ for i in range(1, len(sys.argv)):
     if sys.argv[i][:2] == "-g":
         continue
 
+    #If argument is '-I', skip it
+    if sys.argv[i] == "-I":
+        continue
+
     #If the previous argument was '-f', make a folder
     if sys.argv[i - 1] == "-f":
         if not os.path.exists(os.path.expanduser(sys.argv[i])):
             os.makedirs(os.path.expanduser(sys.argv[i]))
         DIR = os.path.expanduser(sys.argv[i])
         continue
+
+    #If we made it this far, argv[i] is a source folder that we need to run tree on
+    #Check if we are ignoring empty/nonexistant folders
+    if IGNORE:
+        if not os.path.isdir(os.path.expanduser(sys.argv[i])):
+            continue
+        if os.listdir(os.path.expanduser(sys.argv[i])) == []:
+            continue
 
     exit_code = os.system("tree --du -h --charset=ANSII -F '%s' > '%s/%s'" % (
                 os.path.expanduser(sys.argv[i]), DIR, os.path.basename(sys.argv[i].rstrip("/"))))
