@@ -5,6 +5,7 @@ __version__ = '2.0'
 import argparse
 import os
 import sys
+import commands
 
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
                                  usage=("\t%s -f OUT_DIR SRC_DIR...\n" % os.path.basename(__file__) +
@@ -20,7 +21,7 @@ parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpForm
                                          "\t0 if OK\n"
                                          "\t1 if Errors caused an early exit\n\n"))
 parser.add_argument("-e", "--examples", action="store_true", help="show usage examples")
-parser.add_argument("-f", "--folder", metavar=("OUT_DIR", "SRC_DIR"), nargs="+", action="append",
+parser.add_argument("-f", "--folder", metavar=("OUT_DIR", "SRC_DIR"), nargs="*", action="append",
                     help=("specify output folder. Can be specified multiple times. The last folder in the OUT_DIR"
                           " path will get created if it does not exist"))
 parser.add_argument("-g", "--git", metavar="GIT_ROOT_DIR",
@@ -29,6 +30,8 @@ parser.add_argument("-g", "--git", metavar="GIT_ROOT_DIR",
 parser.add_argument("-i", "--ignore", action="store_true",
                     help="ignore empty and non-existent input directories. Useful when dealing with mounted filesystems"
                          " that may be unmounted once in a while when %s is running." % os.path.basename(__file__))
+parser.add_argument("-t", "--total", metavar=("OUT_FILE", "SRC_DIR"), nargs="*", action="append",
+                    help="create OUT_FILE with data about the total sizes of SRC_DIRs. Can be specified multiple times")
 parser.add_argument('-v', '--version', action='version', version=('%(prog)s ' + __version__))
 args = parser.parse_args()
 
@@ -65,7 +68,7 @@ if args.examples:
     print "\t\t    -g '/home/user/test folder'"
     exit(0)
 
-#Check number of git and ignore args
+#Check number of git, ignore, and folder args
 git_args = 0
 ignore_args = 0
 folder_args = 0
@@ -96,6 +99,14 @@ for i in range(0, len(args.folder)):
         print "%s: error:" % os.path.basename(__file__) + " '--folder' must have at least 2 arguments"
         exit(1)
 
+#Make sure the '-t' option always has at least 2 arguments (1 output file and 1 source folder)
+if args.total:
+    for i in range(0, len(args.total)):
+        if len(args.total[i]) < 2:
+            parser.print_usage()
+            print "%s: error:" % os.path.basename(__file__) + " '--total' must have at least 2 arguments"
+            exit(1)
+
 #Check if all source and output folders are valid
 if args.folder:     # Check if '-f' was ever passed to the script
     for i in range(0, len(args.folder)):    # For every list in args.folder
@@ -119,6 +130,44 @@ if args.folder:     # Check if '-f' was ever passed to the script
                                                                            "source folder" % args.folder[i][x])
                         exit(1)
 
+#Check if all -t options are valid
+if args.total:
+    for i in range(0, len(args.total)):     # For every list in args.total
+        for x in range(0, len(args.total[i])):   # For every item in the current list
+            if x == 0:  # args.total[i][0] is always the output file (ex: -t total /etc /var OR -t ~/total /etc /var)
+                #Make sure that the user is giving us a file instead of a dir
+                if args.total[i][x][-1] == "/" or args.total[i][x][-1] == ".":
+                    parser.print_usage()
+                    print "%s: error:" % os.path.basename(__file__) +\
+                          " '%s' is a dir, when we are expecting a filename or file path" % args.total[i][x]
+                    exit(1)
+
+                #Make sure that the user is not giving us an existing directory
+                if os.path.isdir(os.path.expanduser(args.total[i][x])):
+                    parser.print_usage()
+                    print "%s: error:" % os.path.basename(__file__) +\
+                          " '%s' is an existing dir, when we are expecting a filename or file path" % args.total[i][x]
+                    exit(1)
+
+                #The dirname does not need to exist if it doesn't start with / or ~
+                if args.total[i][x][0] == "/" or args.total[i][x][0] == "~":
+                    #Check if the dirname of the output folder exists - we will create the file
+                    if not os.path.isdir(os.path.expanduser(os.path.dirname(args.total[i][x].rstrip("/")))):
+                        parser.print_usage()
+                        print "%s: error:" % os.path.basename(__file__) +\
+                              (" '%s' is not a valid path " % os.path.dirname(args.total[i][x].rstrip("/")) +
+                              "for an output folder for --total")
+                        exit(1)
+            else:
+                if not args.ignore:     # Make sure we weren't specifically told to ignore non-existent folders
+                    #Check if the source folder exists
+                    if not os.path.isdir(os.path.expanduser(args.total[i][x])):
+                        parser.print_usage()
+                        print "%s: error:" % os.path.basename(__file__) +\
+                              (" '%s' is not a valid path " % args.total[i][x] +
+                              "for a source folder for --total")
+                        exit(1)
+
 #Check if git root folder is valid
 GIT_VALID = False
 if args.git:
@@ -133,7 +182,7 @@ if args.git:
             print "%s: error:" % os.path.basename(__file__) + " '%s' is an invalid path for a git repo" % args.git
             exit(1)
 
-#For every argument, run tree on it and send it where it needs to go
+#For every argument to -f, run tree on it and send it where it needs to go
 for i in range(0, len(args.folder)):    # For every list in args.folder
     for x in range(0, len(args.folder[i])):     # For every item in the current list
         if x == 0:      # args.folder[i][0] is always the output folder (ex: -f OUTPUT_FOLDER SRC SRC SRC)
@@ -164,6 +213,44 @@ for i in range(0, len(args.folder)):    # For every list in args.folder
                        os.path.expanduser(args.folder[i][0]),
                        os.path.basename(args.folder[i][x].rstrip("/"))))
                 exit(1)
+
+#For every argument to -t, run du on it and send it where it needs to go
+if args.total:
+    for i in range(0, len(args.total)):     # For every list in args.total
+        f = ''  # File handle
+        #Open output file for writing
+        try:
+            f = open(args.total[i][0], "w")     # Immediately blanks out a file and prepares it for writing
+        except IOError:
+            parser.print_usage()
+            print "%s: error:" % os.path.basename(__file__) + " failed to write to '%s'" % args.total[i][0]
+            exit(1)
+
+        for x in range(0, len(args.total[i])):     # For every item in the current list
+            if x == 0:  # Skip the first argument to every -t (the output file)
+                continue
+
+            f.write(os.path.expanduser(args.total[i][x]) + '\n')
+            f.write("=" * len(os.path.expanduser(args.total[i][x])) + '\n')
+
+            #Check if source folder exists (it may not if -i was used)
+            if os.path.isdir(os.path.expanduser(args.total[i][x])):
+                du_cmd = commands.getstatusoutput("du -hcs '%s'/*" % os.path.expanduser(args.total[i][x]))
+
+                #Check exit status
+                if du_cmd[0] == 0:
+                    f.write(du_cmd[1])
+                else:
+                    f.write("Problem occurred when running du:\n")
+                    #Indent errors
+                    for line in du_cmd[1].splitlines():
+                        f.write("\t" + line + '\n')
+            else:
+                f.write("'%s' not found" % os.path.expanduser(args.total[i][x]))
+
+            f.write('\n\n')
+
+        f.close()
 
 #If git is enabled, start a new repo (if necessary), add files and commit
 if args.git:
