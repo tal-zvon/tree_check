@@ -7,8 +7,8 @@ import os
 import sys
 
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
-                                 usage=("\t%s -f OUTPUT_FOLDER SOURCE_FOLDER...\n" % os.path.basename(__file__) +
-                                        "\t\t      [-g GIT_ROOT_FOLDER] [-i]\n" +
+                                 usage=("\t%s -f OUT_DIR SRC_DIR...\n" % os.path.basename(__file__) +
+                                        "\t\t      [-g GIT_ROOT_DIR] [-i]\n" +
                                         "\t%s -h | --help\n" % os.path.basename(__file__) +
                                         "\t%s -v | --version" % os.path.basename(__file__)),
                                  description=('Run the "tree"'
@@ -20,11 +20,11 @@ parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpForm
                                          "\t0 if OK\n"
                                          "\t1 if Errors caused an early exit\n\n"))
 parser.add_argument("-e", "--examples", action="store_true", help="show usage examples")
-parser.add_argument("-f", "--folder", metavar=("OUTPUT_FOLDER", "SOURCE_FOLDER"), nargs="+", action="append",
-                    help=("specify output folder. Can be specified multiple times. The last folder in the OUTPUT_FOLDER"
+parser.add_argument("-f", "--folder", metavar=("OUT_DIR", "SRC_DIR"), nargs="+", action="append",
+                    help=("specify output folder. Can be specified multiple times. The last folder in the OUT_DIR"
                           " path will get created if it does not exist"))
-parser.add_argument("-g", "--git", metavar="GIT_ROOT_FOLDER",
-                    help=("enable git. Uses git to version control output after generating it. GIT_ROOT_FOLDER is the "
+parser.add_argument("-g", "--git", metavar="GIT_ROOT_DIR",
+                    help=("enable git. Uses git to version control output after generating it. GIT_ROOT_DIR is the "
                           "root of the git repo"))
 parser.add_argument("-i", "--ignore", action="store_true",
                     help="ignore empty and non-existent input directories. Useful when dealing with mounted filesystems"
