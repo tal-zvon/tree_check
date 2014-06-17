@@ -235,16 +235,7 @@ if args.total:
 
             #Check if source folder exists (it may not if -i was used)
             if os.path.isdir(os.path.expanduser(args.total[i][x])):
-                du_cmd = commands.getstatusoutput("du -hcs '%s'/*" % os.path.expanduser(args.total[i][x]))
-
-                #Check exit status
-                if du_cmd[0] == 0:
-                    f.write(du_cmd[1])
-                else:
-                    f.write("Problem occurred when running du:\n")
-                    #Indent errors
-                    for line in du_cmd[1].splitlines():
-                        f.write("\t" + line + '\n')
+                f.write(commands.getoutput("du -hcs '%s'/*" % os.path.expanduser(args.total[i][x])))
             else:
                 f.write("'%s' not found" % os.path.expanduser(args.total[i][x]))
 
