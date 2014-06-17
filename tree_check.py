@@ -8,7 +8,7 @@ import sys
 
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
                                  usage=("\t%s -f OUTPUT_FOLDER SOURCE_FOLDER...\n" % os.path.basename(__file__) +
-                                        "\t\t\t[-g GIT_ROOT_FOLDER] [-i]\n" +
+                                        "\t\t      [-g GIT_ROOT_FOLDER] [-i]\n" +
                                         "\t%s -h | --help\n" % os.path.basename(__file__) +
                                         "\t%s -v | --version" % os.path.basename(__file__)),
                                  description=('Run the "tree"'
