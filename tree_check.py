@@ -1,243 +1,182 @@
 #!/usr/bin/python
 __author__ = 'tal'
+__version__ = '2.0'
 
-import sys
+import argparse
 import os
-import textwrap
-import signal
+import sys
 
-GIT = False
-#The root of the git repo
-GIT_ROOT = '.'
-#True if git root must be specified explicitly
-GIT_REQ = False
-DIR = '.'
-#True if we want to ignore non-existent folders (skip them)
-IGNORE = False
+parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
+                                 usage=("\t%s -f OUTPUT_FOLDER SOURCE_FOLDER...\n" % os.path.basename(__file__) +
+                                        "\t\t\t[-g GIT_ROOT_FOLDER] [-i]\n" +
+                                        "\t%s -h | --help\n" % os.path.basename(__file__) +
+                                        "\t%s -v | --version" % os.path.basename(__file__)),
+                                 description=('Run the "tree"'
+                                              ' command in a way that:\n'
+                                              '  * Makes the output easily grepable\n'
+                                              '  * Shows dir and file sizes in a human readable way\n'
+                                              'and write the output to a desired location.'),
+                                 epilog=("Exit Status:\n"
+                                         "\t0 if OK\n"
+                                         "\t1 if Errors caused an early exit\n\n"))
+parser.add_argument("-e", "--examples", action="store_true", help="show usage examples")
+parser.add_argument("-f", "--folder", metavar=("OUTPUT_FOLDER", "SOURCE_FOLDER"), nargs="+", action="append",
+                    help=("specify output folder. Can be specified multiple times. The last folder in the OUTPUT_FOLDER"
+                          " path will get created if it does not exist"))
+parser.add_argument("-g", "--git", metavar="GIT_ROOT_FOLDER",
+                    help=("enable git. Uses git to version control output after generating it. GIT_ROOT_FOLDER is the "
+                          "root of the git repo"))
+parser.add_argument("-i", "--ignore", action="store_true",
+                    help="ignore empty and non-existent input directories. Useful when dealing with mounted filesystems"
+                         " that may be unmounted once in a while when %s is running." % os.path.basename(__file__))
+parser.add_argument('-v', '--version', action='version', version=('%(prog)s ' + __version__))
+args = parser.parse_args()
 
-
-class Color:
-    PURPLE = '\033[95m'
-    CYAN = '\033[96m'
-    DARKCYAN = '\033[36m'
-    BLUE = '\033[94m'
-    GREEN = '\033[92m'
-    YELLOW = '\033[93m'
-    RED = '\033[91m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-    END = '\033[0m'
-
-
-def signal_handler(signal, frame):
-    print Color.END
+#If examples arg passed, show help with examples and exit
+if args.examples:
+    os.system(sys.argv[0] + " -h")
+    print "\nExamples:"
+    print "\tRun tree on /etc, and put the output into the current folder:"
+    print "\t\t$ %s -f . /etc\n" % os.path.basename(__file__)
+    print "\tRun tree on /etc, and put the output into a folder called PC1:"
+    print "\t\t$ %s -f PC1 /etc\n" % os.path.basename(__file__)
+    print "\tRun tree on /etc, and put the output into the current folder."
+    print "\tAlso run tree on '/SOME FOLDER' and put the output into the folder"
+    print "\tcalled 'Machine 2':"
+    print "\t\t$ %s -f . /etc -f Machine\ 2 /SOME\ FOLDER" % os.path.basename(__file__)
+    print "\t\tOR"
+    print "\t\t$ %s -f . /etc -f 'Machine 2' '/SOME FOLDER'\n" % os.path.basename(__file__)
+    print "\tRun tree on /etc, and put the output into the current folder."
+    print "\tThen run tree on /var and /usr, and put the output of both into"
+    print "\ta folder called PC1."
+    print "\tFinally run tree on /home, and put the output into the current"
+    print "\tfolder too."
+    print "\t\t$ %s -f . /etc -f PC1 /var /usr -f . /home\n" % os.path.basename(__file__)
+    print "\tRun tree on /etc, and make the output folder"
+    print "\t'/home/user/test folder/Machine 1'."
+    print "\tRun tree on /var, and make the output folder"
+    print "\t'/home/user/test folder/Machine 2'."
+    print "\tSet the git repo root folder to '/home/user/test folder/',"
+    print "\tand make a git snapshot."
+    print "\tNote: In this case, the '/home/user/test folder/'"
+    print "\tdir must already exist"
+    print "\t\t$ %s -f '/home/user/test folder/Machine 1' \\" % os.path.basename(__file__)
+    print "\t\t    /etc -f '/home/user/test folder/Machine 2' /var \\"
+    print "\t\t    -g '/home/user/test folder'"
     exit(0)
 
-
-def usage():
-    print Color.BOLD + "NAME" + Color.END
-    print '\t%s - do a tree of specified folders' % os.path.basename(sys.argv[0])
-    print ''
-    print Color.BOLD + "DESCRIPTION" + Color.END
-    print '\tRun the "tree" command in a way that:'
-    print '\t    * Uses the ANSII standard to make it easily grepable'
-    print '\t    * Shows dir and file sizes in a human readable way'
-    print '\ton any folders passed to %s as arguments, and' % os.path.basename(sys.argv[0])
-    print '\twrites the output to a file with the same name in the CWD.'
-    print '\tNOTE: %s does NOT write anything to stdout!' % os.path.basename(sys.argv[0])
-    print
-    print '\t%s can also create folders to store the output' % os.path.basename(sys.argv[0])
-    print '\tin any way you like.'
-    print
-    print '\t' + Color.BOLD + '-f OUTPUT_FOLDER' + Color.END
-    print '\t\t' + '\n\t\t'.join(textwrap.wrap(
-        'Output folder name. Can be used more than once. All output is stored in the folder specified by the last -f statement used. If -f is omitted, output is stored in the current directory. To specify the current directory explicitly, use "-f ." See examples for details.',
-        60))
-    print
-    print '\t' + Color.BOLD + '-g' + Color.END + '[=GIT_ROOT_DIR]'
-    print '\t\t' + '\n\t\t'.join(textwrap.wrap(
-        'Enable git. After generating output, runs "git add ." and "git commit -m $(date)" on the output folder. The GIT_ROOT_FOLDER specifies where the root of the git repo will be. When using relative paths for -f options, the GIT_ROOT_FOLDER is assumed to be the CWD if the =GIT_ROOT_FOLDER is omitted. When using absolute paths for -f, the GIT_ROOT_FOLDER MUST be specified.', 60))
-    print
-    print '\t' + Color.BOLD + '-h, --help' + Color.END
-    print '\t\t' + '\n\t\t'.join(textwrap.wrap('Display this help and exit', 60))
-    print
-    print '\t' + Color.BOLD + '-I' + Color.END
-    print '\t\t' + '\n\t\t'.join(textwrap.wrap('Ignore empty and non-existent directories. Useful when dealing with mounted filesystems that may be unmounted once in a while when %s is running.' % os.path.basename(sys.argv[0]), 60))
-    print
-    print '\t' + Color.BOLD + "Exit status:" + Color.END
-    print '\t    0  if OK'
-    print '\t    1  if Errors caused an early exit'
-    print
-    print Color.BOLD + "EXAMPLES" + Color.END
-    print '\tRun tree on /etc, and put the output into the current folder:'
-    print '\t    $ %s /etc' % os.path.basename(sys.argv[0])
-    print
-    print '\tRun tree on /etc, and put the output into a folder called PC1:'
-    print '\t    $ %s -f PC1 /etc' % os.path.basename(sys.argv[0])
-    print
-    print '\tRun tree on /etc, and put the output into the current folder.'
-    print '\tAlso run tree on "/SOME FOLDER" and put the output into the folder'
-    print '\tcalled "Machine 2":'
-    print '\t    $ %s /etc -f Machine\ 2 /SOME\ FOLDER' % os.path.basename(sys.argv[0])
-    print '\tOR'
-    print '\t    $ %s /etc -f "Machine 2" "/SOME FOLDER"' % os.path.basename(sys.argv[0])
-    print
-    print '\tRun tree on /etc, and put the output into the current folder.'
-    print '\tThen run tree on /var and /usr, and put the output of both into'
-    print '\ta folder called PC1.'
-    print '\tFinally run tree on /home, and put the output into the current'
-    print '\tfolder too.'
-    print '\t    $ %s /etc -f PC1 /var /usr -f . /home' % os.path.basename(sys.argv[0])
-    print
-    print '\tRun tree on /etc, and make the output folder\n\t"/home/user/Documents/test folder/Machine 1".'
-    print '\tRun tree on /var, and make the output folder\n\t"/home/user/Documents/test folder/Machine 2".'
-    print '\tSet the git repo root folder to "/home/user/Documents/test folder/",\n\tand make a git snapshot.'
-    print '\tNote: In this case, the "/home/user/Documents/test folder/"\n\tdir must already exist'
-    print '\t    $ %s -f "/home/user/Documents/test folder/Machine 1" \\\n\t\t/etc -f "/home/user/Documents/test folder/Machine 2" /var \\\n\t\t"-g=/home/user/Documents/test folder"' % os.path.basename(sys.argv[0])
-    print
-    print Color.BOLD + "AUTHOR" + Color.END
-    print '\tWritten by Tal.'
-    print
-    print Color.BOLD + "REPORTING BUGS" + Color.END
-    print '\tReport %s bugs to Tal\'s GitHub repo.' % os.path.basename(sys.argv[0])
-    print
-    print Color.BOLD + "LICENSE" + Color.END
-    print '\tGPLv2 - http://www.gnu.org/licenses/gpl-2.0.html'
-    print
-
-#If user hits Ctrl+C, make sure the terminal colors are back to normal
-signal.signal(signal.SIGINT, signal_handler)
-
-#If there are no arguments, show usage and exit
-if len(sys.argv) == 1:
-    usage()
-    exit(0)
-
-#Check for '-I' argument
+#Check number of git and ignore args
+git_args = 0
+ignore_args = 0
+folder_args = 0
 for i in range(1, len(sys.argv)):
-    if sys.argv[i] == "-I":
-        IGNORE = True
-        break
-
-#Check for invalid arguments
-for i in range(1, len(sys.argv)):
-
-    #If one of the arguments is '-g', enable git
-    if sys.argv[i][:2] == "-g":
-        if len(sys.argv[i]) > 2:
-            #Make sure the extended version of -g (-g=) is formatted correctly
-            if len(sys.argv[i]) == 3:
-                print "Invalid formatting: '%s'" % sys.argv[i]
-                exit(1)
-            elif len(sys.argv[i]) > 3:
-                if sys.argv[i][2] != "=":
-                    print "Invalid formatting: '%s'" % sys.argv[i]
-                    exit(1)
-
-            #Assign root directory for git to GIT_ROOT
-            GIT_ROOT = sys.argv[i][3:]
-
-        GIT = True
-        continue
-
-    #If one of the arguments is '-h' or '--help', show help and exit
-    if sys.argv[i] == "-h" or sys.argv[i] == "--help":
-        usage()
-        exit(0)
-
-    #If the argument is "-I", ignore it - we already set the IGNORE flag
-    if sys.argv[i] == "-I":
-        continue
-
-    #If one of the arguments is '-f', make sure it's not the last argument
-    if sys.argv[i] == "-f":
-        #Check if this is the last argument
-        if i == (len(sys.argv) - 1):
-            print "'-f' cannot be the last argument!\n"
-            exit(1)
-
-        #Check if this is the second last argument
-        if i == (len(sys.argv) - 2):
-            print "'-f %s' cannot be the last argument!\n" % sys.argv[i + 1]
-            exit(1)
-
-        #Check if next argument starts with a /, or a ~
-        if sys.argv[i + 1][:1] == "/" or sys.argv[i + 1][:1] == "~":
-            GIT_REQ = True
-            #Check if dirname of the following argument exists
-            if not os.path.isdir(os.path.dirname(os.path.expanduser(sys.argv[i + 1]))):
-                print "You are using an absolute path. '%s' must exist!" % os.path.dirname(sys.argv[i + 1])
-                exit(1)
-
-        #Skip to the next arg
-        continue
-
-    #Check if the folder exists
-    if not os.path.isdir(os.path.expanduser(sys.argv[i])):
-        #Check if '-f' was the previous argument
-        if sys.argv[i - 1] != '-f':
-            #Check if we are ignoring non-existent folders
-            if not IGNORE:
-                print "'%s' is not a valid folder!" % sys.argv[i]
-                exit(1)
-
-#Check if git is required, and if it was specified
-if GIT_REQ and GIT_ROOT == '.':
-    print "You are using absolute paths for your output"
-    print "You must specify the root of your git repo explicitly with '-g=/some_folder'"
+    if sys.argv[i] == "-g" or sys.argv[i] == "--git":
+        git_args += 1
+    if sys.argv[i] == "-i" or sys.argv[i] == "--ignore":
+        ignore_args += 1
+    if sys.argv[i] == "-f" or sys.argv[i] == "--folder":
+        folder_args += 1
+if git_args > 1:
+    parser.print_usage()
+    print "%s: error:" % os.path.basename(__file__) + " only one '--git' argument allowed"
+    exit(1)
+if ignore_args > 1:
+    parser.print_usage()
+    print "%s: error:" % os.path.basename(__file__) + " only one '--ignore' argument allowed"
+    exit(1)
+if folder_args == 0:
+    parser.print_usage()
+    print "%s: error:" % os.path.basename(__file__) + " must have at least one '--folder' argument"
     exit(1)
 
-#For every argument, run tree on it and send the output where it needs to go
-for i in range(1, len(sys.argv)):
-    #If argument is '-f', skip it
-    if sys.argv[i] == "-f":
-        continue
-
-    #If argument is '-g', skip it
-    if sys.argv[i][:2] == "-g":
-        continue
-
-    #If argument is '-I', skip it
-    if sys.argv[i] == "-I":
-        continue
-
-    #If the previous argument was '-f', make a folder
-    if sys.argv[i - 1] == "-f":
-        if not os.path.exists(os.path.expanduser(sys.argv[i])):
-            os.makedirs(os.path.expanduser(sys.argv[i]))
-        DIR = os.path.expanduser(sys.argv[i])
-        continue
-
-    #If we made it this far, argv[i] is a source folder that we need to run tree on
-    #Check if we are ignoring empty/nonexistant folders
-    if IGNORE:
-        if not os.path.isdir(os.path.expanduser(sys.argv[i])):
-            continue
-        if os.listdir(os.path.expanduser(sys.argv[i])) == []:
-            continue
-
-    exit_code = os.system("tree --du -h --charset=ANSII -F '%s' > '%s/%s'" % (
-                os.path.expanduser(sys.argv[i]), DIR, os.path.basename(sys.argv[i].rstrip("/"))))
-    if exit_code > 0:
-        print "Something went wrong!"
+#Make sure the '-f' option always has at least 2 arguments (1 output folder and 1 source folder)
+for i in range(0, len(args.folder)):
+    if len(args.folder[i]) < 2:
+        parser.print_usage()
+        print "%s: error:" % os.path.basename(__file__) + " '--folder' must have at least 2 arguments"
         exit(1)
 
-#Check if git is enabled
-if GIT:
-    #Check if GIT_ROOT is an actual folder
-    if not os.path.isdir(os.path.expanduser(GIT_ROOT)):
-        print "'%s' does not exist! Check your -g= option" % GIT_ROOT
-        exit(1)
-    #Check if current dir is a git repo
-    if os.system("cd '%s'; git status >/dev/null 2>&1" % os.path.expanduser(GIT_ROOT)) != 0:
+#Check if all source and output folders are valid
+if args.folder:     # Check if '-f' was ever passed to the script
+    for i in range(0, len(args.folder)):    # For every list in args.folder
+        for x in range(0, len(args.folder[i])):     # For every item in the current list
+            if x == 0:  # args.folder[i][0] is always the output folder (ex: -f OUTPUT_FOLDER SRC SRC SRC)
+                #The output folder does not need to exist if it doesn't start with / or ~
+                if args.folder[i][x][0] == "/" or args.folder[i][x][0] == "~":
+                    #Check if the dirname of the output folder exists - we can create the last folder if it doesn't
+                    if not os.path.isdir(os.path.expanduser(os.path.dirname(args.folder[i][x].rstrip("/")))):
+                        parser.print_usage()
+                        print "%s: error:" % os.path.basename(__file__) +\
+                              (" '%s' is not a valid path " % os.path.dirname(args.folder[i][x].rstrip("/")) +
+                               "for an output folder")
+                        exit(1)
+            else:
+                if not args.ignore:     # Make sure we weren't specifically told to ignore non-existent source folders
+                    #Check if the source folder exists
+                    if not os.path.isdir(os.path.expanduser(args.folder[i][x])):
+                        parser.print_usage()
+                        print "%s: error:" % os.path.basename(__file__) + (" '%s' is not a valid path for a "
+                                                                           "source folder" % args.folder[i][x])
+                        exit(1)
+
+#Check if git root folder is valid
+GIT_VALID = False
+if args.git:
+    if not os.path.isdir(os.path.expanduser(args.git)):
+        #Check if it's listed as an output folder
+        for i in range(0, len(args.folder)):
+            if os.path.expanduser(args.folder[i][0]).rstrip("/") == os.path.expanduser(args.git).rstrip("/"):
+                GIT_VALID = True
+                break
+        if not GIT_VALID:
+            parser.print_usage()
+            print "%s: error:" % os.path.basename(__file__) + " '%s' is an invalid path for a git repo" % args.git
+            exit(1)
+
+#For every argument, run tree on it and send it where it needs to go
+for i in range(0, len(args.folder)):    # For every list in args.folder
+    for x in range(0, len(args.folder[i])):     # For every item in the current list
+        if x == 0:      # args.folder[i][0] is always the output folder (ex: -f OUTPUT_FOLDER SRC SRC SRC)
+            if not os.path.isdir(os.path.expanduser(args.folder[i][x])):    # If the output folder doesn't exist
+                try:
+                    os.makedirs(os.path.expanduser(args.folder[i][x]))
+                except OSError:
+                    parser.print_usage()
+                    print "%s: error:" % os.path.basename(__file__) + " unable to create '%s' output directory" %\
+                                                                      args.folder[i][x]
+                    print "%s: error: check your permissions" % os.path.basename(__file__)
+                    exit(1)
+        else:   # For every source folder
+            if not os.path.isdir(os.path.expanduser(args.folder[i][x])):    # If the source folder doesn't exist
+                continue    # Skip it. We're clearly using -i, or it would have been caught earlier
+            if args.ignore and os.listdir(os.path.expanduser(args.folder[i][x])) == []:  # If the source folder is empty
+                continue    # Skip it. Ex: NFS mounts that exist, but are not mounted
+
+            exit_code = os.system("tree --du -h --charset -F '%s' > '%s/%s'" %
+                                  (os.path.expanduser(args.folder[i][x]),
+                                   os.path.expanduser(args.folder[i][0]),
+                                   os.path.basename(args.folder[i][x].rstrip("/"))))
+
+            if exit_code > 0:
+                print ("Error while running:" +
+                       "'tree --du -h --charset -F '%s' > '%s/%s''" %
+                       (os.path.expanduser(args.folder[i][x]),
+                       os.path.expanduser(args.folder[i][0]),
+                       os.path.basename(args.folder[i][x].rstrip("/"))))
+                exit(1)
+
+#If git is enabled, start a new repo (if necessary), add files and commit
+if args.git:
+    #Check if args.git is a git repo, or if it needs to be created
+    if os.system("cd '%s'; git status >/dev/null 2>&1" % os.path.expanduser(args.git)) != 0:
         #Create a git repo in the current folder
-        exit_code = os.system("cd '%s'; git init" % os.path.expanduser(GIT_ROOT))
+        exit_code = os.system("cd '%s'; git init >/dev/null" % os.path.expanduser(args.git))
 
         #If it failed to create, exit
         if exit_code > 0:
-            print "Something went wrong when creating a git repo."
+            parser.print_usage()
+            print "%s: error:" % os.path.basename(__file__) + " something went wrong when creating a git repo"
             exit(1)
 
-    os.system('cd "%s"; git add .' % os.path.expanduser(GIT_ROOT))
-    os.system('cd "%s"; git commit -m "$(date)" >/dev/null' % os.path.expanduser(GIT_ROOT))
-
+    os.system('cd "%s"; git add .' % os.path.expanduser(args.git))
+    os.system('cd "%s"; git commit -m "$(date)" >/dev/null' % os.path.expanduser(args.git))
