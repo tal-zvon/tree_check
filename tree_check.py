@@ -72,6 +72,7 @@ if args.examples:
 git_args = 0
 ignore_args = 0
 folder_args = 0
+total_args = 0
 for i in range(1, len(sys.argv)):
     if sys.argv[i] == "-g" or sys.argv[i] == "--git":
         git_args += 1
@@ -79,25 +80,30 @@ for i in range(1, len(sys.argv)):
         ignore_args += 1
     if sys.argv[i] == "-f" or sys.argv[i] == "--folder":
         folder_args += 1
+    if sys.argv[i] == "-t" or sys.argv[i] == "--total":
+        total_args += 1
 if git_args > 1:
     parser.print_usage()
     print "%s: error:" % os.path.basename(__file__) + " only one '--git' argument allowed"
     exit(1)
+if git_args == 1:
+    #If git is enabled, either -f or -t must be as well
+    if folder_args == 0 and total_args == 0:
+        parser.print_usage()
+        print "%s: error:" % os.path.basename(__file__) + " '--git' can not be enabled without either '-f' or '-t'"
+        exit(1)
 if ignore_args > 1:
     parser.print_usage()
     print "%s: error:" % os.path.basename(__file__) + " only one '--ignore' argument allowed"
     exit(1)
-if folder_args == 0:
-    parser.print_usage()
-    print "%s: error:" % os.path.basename(__file__) + " must have at least one '--folder' argument"
-    exit(1)
 
 #Make sure the '-f' option always has at least 2 arguments (1 output folder and 1 source folder)
-for i in range(0, len(args.folder)):
-    if len(args.folder[i]) < 2:
-        parser.print_usage()
-        print "%s: error:" % os.path.basename(__file__) + " '--folder' must have at least 2 arguments"
-        exit(1)
+if args.folder:
+    for i in range(0, len(args.folder)):
+        if len(args.folder[i]) < 2:
+            parser.print_usage()
+            print "%s: error:" % os.path.basename(__file__) + " '--folder' must have at least 2 arguments"
+            exit(1)
 
 #Make sure the '-t' option always has at least 2 arguments (1 output file and 1 source folder)
 if args.total:
@@ -172,47 +178,49 @@ if args.total:
 GIT_VALID = False
 if args.git:
     if not os.path.isdir(os.path.expanduser(args.git)):
-        #Check if it's listed as an output folder
-        for i in range(0, len(args.folder)):
-            if os.path.expanduser(args.folder[i][0]).rstrip("/") == os.path.expanduser(args.git).rstrip("/"):
-                GIT_VALID = True
-                break
-        if not GIT_VALID:
-            parser.print_usage()
-            print "%s: error:" % os.path.basename(__file__) + " '%s' is an invalid path for a git repo" % args.git
-            exit(1)
+        if args.folder:
+            #Check if it's listed as an output folder
+            for i in range(0, len(args.folder)):
+                if os.path.expanduser(args.folder[i][0]).rstrip("/") == os.path.expanduser(args.git).rstrip("/"):
+                    GIT_VALID = True
+                    break
+            if not GIT_VALID:
+                parser.print_usage()
+                print "%s: error:" % os.path.basename(__file__) + " '%s' is an invalid path for a git repo" % args.git
+                exit(1)
 
 #For every argument to -f, run tree on it and send it where it needs to go
-for i in range(0, len(args.folder)):    # For every list in args.folder
-    for x in range(0, len(args.folder[i])):     # For every item in the current list
-        if x == 0:      # args.folder[i][0] is always the output folder (ex: -f OUTPUT_FOLDER SRC SRC SRC)
-            if not os.path.isdir(os.path.expanduser(args.folder[i][x])):    # If the output folder doesn't exist
-                try:
-                    os.makedirs(os.path.expanduser(args.folder[i][x]))
-                except OSError:
-                    parser.print_usage()
-                    print "%s: error:" % os.path.basename(__file__) + " unable to create '%s' output directory" %\
-                                                                      args.folder[i][x]
-                    print "%s: error: check your permissions" % os.path.basename(__file__)
+if args.folder:
+    for i in range(0, len(args.folder)):    # For every list in args.folder
+        for x in range(0, len(args.folder[i])):     # For every item in the current list
+            if x == 0:      # args.folder[i][0] is always the output folder (ex: -f OUTPUT_FOLDER SRC SRC SRC)
+                if not os.path.isdir(os.path.expanduser(args.folder[i][x])):    # If the output folder doesn't exist
+                    try:
+                        os.makedirs(os.path.expanduser(args.folder[i][x]))
+                    except OSError:
+                        parser.print_usage()
+                        print "%s: error:" % os.path.basename(__file__) + " unable to create '%s' output directory" %\
+                                                                          args.folder[i][x]
+                        print "%s: error: check your permissions" % os.path.basename(__file__)
+                        exit(1)
+            else:   # For every source folder
+                if not os.path.isdir(os.path.expanduser(args.folder[i][x])):    # If the source folder doesn't exist
+                    continue    # Skip it. We're clearly using -i, or it would have been caught earlier
+                if args.ignore and os.listdir(os.path.expanduser(args.folder[i][x])) == []:  # If the source folder is empty
+                    continue    # Skip it. Ex: NFS mounts that exist, but are not mounted
+
+                exit_code = os.system("tree --du -h --charset -F '%s' > '%s/%s'" %
+                                      (os.path.expanduser(args.folder[i][x]),
+                                       os.path.expanduser(args.folder[i][0]),
+                                       os.path.basename(args.folder[i][x].rstrip("/"))))
+
+                if exit_code > 0:
+                    print ("Error while running:" +
+                           "'tree --du -h --charset -F '%s' > '%s/%s''" %
+                           (os.path.expanduser(args.folder[i][x]),
+                           os.path.expanduser(args.folder[i][0]),
+                           os.path.basename(args.folder[i][x].rstrip("/"))))
                     exit(1)
-        else:   # For every source folder
-            if not os.path.isdir(os.path.expanduser(args.folder[i][x])):    # If the source folder doesn't exist
-                continue    # Skip it. We're clearly using -i, or it would have been caught earlier
-            if args.ignore and os.listdir(os.path.expanduser(args.folder[i][x])) == []:  # If the source folder is empty
-                continue    # Skip it. Ex: NFS mounts that exist, but are not mounted
-
-            exit_code = os.system("tree --du -h --charset -F '%s' > '%s/%s'" %
-                                  (os.path.expanduser(args.folder[i][x]),
-                                   os.path.expanduser(args.folder[i][0]),
-                                   os.path.basename(args.folder[i][x].rstrip("/"))))
-
-            if exit_code > 0:
-                print ("Error while running:" +
-                       "'tree --du -h --charset -F '%s' > '%s/%s''" %
-                       (os.path.expanduser(args.folder[i][x]),
-                       os.path.expanduser(args.folder[i][0]),
-                       os.path.basename(args.folder[i][x].rstrip("/"))))
-                exit(1)
 
 #For every argument to -t, run du on it and send it where it needs to go
 if args.total:
