@@ -82,6 +82,19 @@ for i in range(1, len(sys.argv)):
         folder_args += 1
     if sys.argv[i] == "-t" or sys.argv[i] == "--total":
         total_args += 1
+
+#Use argparse to detect tricky arg combinations (eg: -fgi or -gf)
+#Note: This is slightly problematic because it doesn't actually count
+#       how many times an option appears - only that it does
+if git_args == 0 and args.git:
+    git_args = 1
+if ignore_args == 0 and args.ignore:
+    ignore_args = 1
+if folder_args == 0 and args.folder:
+    folder_args = 1
+if total_args == 0 and args.total:
+    total_args = 1
+
 if git_args > 1:
     parser.print_usage()
     print "%s: error:" % os.path.basename(__file__) + " only one '--git' argument allowed"
@@ -188,6 +201,10 @@ if args.git:
                 parser.print_usage()
                 print "%s: error:" % os.path.basename(__file__) + " '%s' is an invalid path for a git repo" % args.git
                 exit(1)
+        else:
+            parser.print_usage()
+            print "%s: error:" % os.path.basename(__file__) + " '%s' is an invalid path for a git repo" % args.git
+            exit(1)
 
 #For every argument to -f, run tree on it and send it where it needs to go
 if args.folder:
@@ -206,7 +223,7 @@ if args.folder:
             else:   # For every source folder
                 if not os.path.isdir(os.path.expanduser(args.folder[i][x])):    # If the source folder doesn't exist
                     continue    # Skip it. We're clearly using -i, or it would have been caught earlier
-                if args.ignore and os.listdir(os.path.expanduser(args.folder[i][x])) == []:  # If the source folder is empty
+                if args.ignore and os.listdir(os.path.expanduser(args.folder[i][x])) == []:  # If source folder is empty
                     continue    # Skip it. Ex: NFS mounts that exist, but are not mounted
 
                 exit_code = os.system("tree --du -h --charset -F '%s' > '%s/%s'" %
