@@ -69,6 +69,12 @@ if args.examples:
     print "\t\t    -g '/home/user/test folder'"
     exit(0)
 
+#If not arguments are given, give warning and exit
+if len(sys.argv) == 1:
+    parser.print_usage()
+    print "%s: error:" % os.path.basename(__file__) + " need at least a '-f' or '-t' argument to run"
+    exit(1)
+
 #Check number of git, ignore, and folder args
 git_args = 0
 ignore_args = 0
