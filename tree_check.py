@@ -208,6 +208,14 @@ if args.folder:
         for x in range(0, len(args.folder[i])):     # For every item in the current list
             if x == 0:      # args.folder[i][0] is always the output folder (ex: -f OUTPUT_FOLDER SRC SRC SRC)
                 if not os.path.isdir(os.path.expanduser(args.folder[i][x])):    # If the output folder doesn't exist
+                    #Make sure there isn't a file with the same name already there
+                    if os.path.isfile(os.path.expanduser(args.folder[i][x])):
+                        parser.print_usage()
+                        print "%s: error:" % os.path.basename(__file__) + " unable to create '%s' output directory" %\
+                                                                          args.folder[i][x]
+                        print "%s: error: a file with that name already exists" % os.path.basename(__file__)
+                        exit(1)
+
                     try:
                         os.makedirs(os.path.expanduser(args.folder[i][x]))
                     except OSError:
