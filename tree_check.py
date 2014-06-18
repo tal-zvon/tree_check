@@ -6,7 +6,6 @@ import argparse
 import os
 import sys
 import commands
-import subprocess
 
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
                                  usage=("\t%s -f OUT_DIR SRC_DIR...\n" % os.path.basename(__file__) +
@@ -38,7 +37,7 @@ args = parser.parse_args()
 
 #If examples arg passed, show help with examples and exit
 if args.examples:
-    print subprocess.check_output([sys.argv[0], '-h']),
+    os.system(sys.argv[0] + " -h")
     print "\nExamples:"
     print "\tRun tree on /etc, and put the output into the current folder:"
     print "\t\t$ %s -f . /etc\n" % os.path.basename(__file__)
@@ -215,15 +214,17 @@ if args.folder:
                 if args.ignore and os.listdir(os.path.expanduser(args.folder[i][x])) == []:  # If source folder is empty
                     continue    # Skip it. Ex: NFS mounts that exist, but are not mounted
 
-                try:
-                    output = subprocess.check_output(['tree', '--du', '-h', '--charset', '-F', '%s' %
-                                                     os.path.expanduser(args.folder[i][x])],
-                                                     stderr=open("/dev/null", "w"))
-                    open("%s/%s" % (os.path.expanduser(args.folder[i][0]),
-                                    os.path.basename(args.folder[i][x].rstrip("/"))), 'w').write(output)
-                except (subprocess.CalledProcessError, OSError, IOError):
-                    parser.print_usage()
-                    print "%s: error:" % os.path.basename(__file__) + " error running the tree command"
+                exit_code = os.system("tree --du -h --charset -F '%s' > '%s/%s'" %
+                                      (os.path.expanduser(args.folder[i][x]),
+                                       os.path.expanduser(args.folder[i][0]),
+                                       os.path.basename(args.folder[i][x].rstrip("/"))))
+
+                if exit_code > 0:
+                    print ("Error while running:" +
+                           "'tree --du -h --charset -F '%s' > '%s/%s''" %
+                           (os.path.expanduser(args.folder[i][x]),
+                           os.path.expanduser(args.folder[i][0]),
+                           os.path.basename(args.folder[i][x].rstrip("/"))))
                     exit(1)
 
 #For every argument to -t, run du on it and send it where it needs to go
