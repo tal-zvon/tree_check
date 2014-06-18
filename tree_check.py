@@ -9,9 +9,10 @@ import subprocess
 import time
 
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
-                                 usage=("\t%s -f OUT_DIR SRC_DIR...\n" % os.path.basename(__file__) +
+                                 usage=("\t%s (-f OUT_DIR SRC_DIR... | -t OUT_FILE SRC_DIR...)\n" % os.path.basename(__file__) +
                                         "\t\t      [-g GIT_ROOT_DIR] [-i]\n" +
                                         "\t%s -h | --help\n" % os.path.basename(__file__) +
+                                        "\t%s -e | --examples\n" % os.path.basename(__file__) +
                                         "\t%s -v | --version" % os.path.basename(__file__)),
                                  description=('Run the "tree"'
                                               ' command in a way that:\n'
