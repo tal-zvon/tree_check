@@ -5,7 +5,8 @@ __version__ = '2.0'
 import argparse
 import os
 import sys
-import commands
+import subprocess
+import time
 
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
                                  usage=("\t%s -f OUT_DIR SRC_DIR...\n" % os.path.basename(__file__) +
@@ -37,7 +38,7 @@ args = parser.parse_args()
 
 #If examples arg passed, show help with examples and exit
 if args.examples:
-    os.system(sys.argv[0] + " -h")
+    print subprocess.check_output([sys.argv[0], '-h']),
     print "\nExamples:"
     print "\tRun tree on /etc, and put the output into the current folder:"
     print "\t\t$ %s -f . /etc\n" % os.path.basename(__file__)
@@ -214,17 +215,15 @@ if args.folder:
                 if args.ignore and os.listdir(os.path.expanduser(args.folder[i][x])) == []:  # If source folder is empty
                     continue    # Skip it. Ex: NFS mounts that exist, but are not mounted
 
-                exit_code = os.system("tree --du -h --charset -F '%s' > '%s/%s'" %
-                                      (os.path.expanduser(args.folder[i][x]),
-                                       os.path.expanduser(args.folder[i][0]),
-                                       os.path.basename(args.folder[i][x].rstrip("/"))))
-
-                if exit_code > 0:
-                    print ("Error while running:" +
-                           "'tree --du -h --charset -F '%s' > '%s/%s''" %
-                           (os.path.expanduser(args.folder[i][x]),
-                           os.path.expanduser(args.folder[i][0]),
-                           os.path.basename(args.folder[i][x].rstrip("/"))))
+                try:
+                    output = subprocess.check_output(['tree', '--du', '-h', '--charset', '-F', '%s' %
+                                                     os.path.expanduser(args.folder[i][x])],
+                                                     stderr=open("/dev/null", "w"))
+                    open("%s/%s" % (os.path.expanduser(args.folder[i][0]),
+                                    os.path.basename(args.folder[i][x].rstrip("/"))), 'w').write(output)
+                except (subprocess.CalledProcessError, OSError, IOError):
+                    parser.print_usage()
+                    print "%s: error:" % os.path.basename(__file__) + " error running the tree command"
                     exit(1)
 
 #For every argument to -t, run du on it and send it where it needs to go
@@ -248,7 +247,9 @@ if args.total:
 
             #Check if source folder exists (it may not if -i was used)
             if os.path.isdir(os.path.expanduser(args.total[i][x])):
-                f.write(commands.getoutput("du -hcs '%s'/*" % os.path.expanduser(args.total[i][x])))
+                f.write(subprocess.Popen("du -hcs %s/*" % os.path.expanduser(args.total[i][x]).rstrip("/"),
+                                         shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                         stderr=subprocess.STDOUT, close_fds=True).stdout.read())
             else:
                 f.write("'%s' not found" % os.path.expanduser(args.total[i][x]))
 
@@ -258,10 +259,13 @@ if args.total:
 
 #If git is enabled, start a new repo (if necessary), add files and commit
 if args.git:
+    #Change dir to git root folder
+    os.chdir(os.path.expanduser(args.git))
+
     #Check if args.git is a git repo, or if it needs to be created
-    if os.system("cd '%s'; git status >/dev/null 2>&1" % os.path.expanduser(args.git)) != 0:
+    if subprocess.call(["git", "status"], stdout=open("/dev/null", "w"), stderr=open("/dev/null", "w")) != 0:
         #Create a git repo in the current folder
-        exit_code = os.system("cd '%s'; git init >/dev/null" % os.path.expanduser(args.git))
+        exit_code = subprocess.call(["git", "init"], stdout=open("/dev/null", "w"))
 
         #If it failed to create, exit
         if exit_code > 0:
@@ -269,5 +273,5 @@ if args.git:
             print "%s: error:" % os.path.basename(__file__) + " something went wrong when creating a git repo"
             exit(1)
 
-    os.system('cd "%s"; git add .' % os.path.expanduser(args.git))
-    os.system('cd "%s"; git commit -m "$(date)" >/dev/null' % os.path.expanduser(args.git))
+    subprocess.call(["git", "add", "."])
+    subprocess.call(["git", "commit", "-m", time.ctime()], stdout=open("/dev/null", "w"))
