@@ -190,7 +190,8 @@ if args.git:
         if args.folder:
             #Check if it's listed as an output folder
             for i in range(0, len(args.folder)):
-                if os.path.expanduser(args.folder[i][0]).rstrip("/") == os.path.expanduser(args.git).rstrip("/"):
+                if os.path.abspath(os.path.expanduser(args.folder[i][0]).rstrip("/")) ==\
+                        os.path.abspath(os.path.expanduser(args.git).rstrip("/")):
                     GIT_VALID = True
                     break
             if not GIT_VALID:
