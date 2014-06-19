@@ -55,10 +55,12 @@ if args.examples:
     print "\tRun tree on /etc, and put the output into the current folder:"
     print "\t\t$ %s -f . /etc\n" % os.path.basename(__file__)
     print "\tRun tree on /etc, and put the output into a folder called PC1:"
+    print "\tNote: Folder 'PC1' is created automatically"
     print "\t\t$ %s -f PC1 /etc\n" % os.path.basename(__file__)
     print "\tRun tree on /etc, and put the output into the current folder."
     print "\tAlso run tree on '/SOME FOLDER' and put the output into the folder"
     print "\tcalled 'Machine 2':"
+    print "\tNote: Folder 'Machine 2' is created automatically"
     print "\t\t$ %s -f . /etc -f Machine\ 2 /SOME\ FOLDER" % os.path.basename(__file__)
     print "\t\tOR"
     print "\t\t$ %s -f . /etc -f 'Machine 2' '/SOME FOLDER'\n" % os.path.basename(__file__)
@@ -66,7 +68,8 @@ if args.examples:
     print "\tThen run tree on /var and /usr, and put the output of both into"
     print "\ta folder called PC1."
     print "\tFinally run tree on /home, and put the output into the current"
-    print "\tfolder too."
+    print "\tfolder too:"
+    print "\tNote: Folder 'PC1' is created automatically"
     print "\t\t$ %s -f . /etc -f PC1 /var /usr -f . /home\n" % os.path.basename(__file__)
     print "\tRun tree on /etc, and make the output folder"
     print "\t'/home/user/test folder/Machine 1'."
@@ -75,10 +78,21 @@ if args.examples:
     print "\tSet the git repo root folder to '/home/user/test folder/',"
     print "\tand make a git snapshot."
     print "\tNote: In this case, the '/home/user/test folder/'"
-    print "\tdir must already exist"
+    print "\t  dir must already exist, while the 'Machine 1' and 'Machine 2' "
+    print "\t  folders are created automatically"
     print "\t\t$ %s -f '/home/user/test folder/Machine 1' \\" % os.path.basename(__file__)
     print "\t\t    /etc -f '/home/user/test folder/Machine 2' /var \\"
-    print "\t\t    -g '/home/user/test folder'"
+    print "\t\t    -g '/home/user/test folder'\n"
+    print "\tRun 'du -hcs' on /etc and /var, and put the output in a "
+    print "\tfile called 'etc_var_totals'."
+    print "\tAlso run 'du -hcs' on /home and /usr and put the output "
+    print "\tin a file called 'home_usr_totals'."
+    print "\tThen make a git snapshot of the output folder:"
+    print "\t\t$ %s -t etc_var_totals /etc /var \\" % os.path.basename(__file__)
+    print "\t\t    -t home_usr_totals /home /usr -g .\n"
+    print "\tRun tree on '/etc', and run 'du -hcs' on /var before taking a "
+    print "\tsnapshot of the output folder with git:"
+    print "\t\t$ %s -f . /etc -t totals /var -g ." % os.path.basename(__file__)
     exit(0)
 
 #If not arguments are given, give warning and exit
