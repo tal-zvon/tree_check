@@ -7,6 +7,15 @@ import os
 import sys
 import subprocess
 import time
+import signal
+
+
+def signal_handler(signal, frame):
+    print   # Newline for formatting
+    sys.exit(0)
+
+#Handle Ctrl+C
+signal.signal(signal.SIGINT, signal_handler)
 
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
                                  usage=("\t%s (-f OUT_DIR SRC_DIR... | -t OUT_FILE SRC_DIR...)\n" % os.path.basename(__file__) +
