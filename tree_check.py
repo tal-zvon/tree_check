@@ -95,10 +95,10 @@ if args.examples:
     print "\t\t$ %s -f . /etc -t totals /var -g ." % os.path.basename(__file__)
     exit(0)
 
-#If not arguments are given, give warning and exit
+#If no arguments are given, give warning and exit
 if len(sys.argv) == 1:
-    parser.print_usage()
-    print "%s: error:" % os.path.basename(__file__) + " need at least a '-f' or '-t' argument to run"
+    parser.print_usage(file=sys.stderr)
+    print >> sys.stderr, "%s: error:" % os.path.basename(__file__) + " need at least a '-f' or '-t' argument to run"
     exit(1)
 
 #Check number of git, ignore, and folder args
@@ -117,34 +117,36 @@ for i in range(1, len(sys.argv)):
     if sys.argv[i][:2] == "-t" or sys.argv[i] == "--total":
         total_args += 1
 if git_args > 1:
-    parser.print_usage()
-    print "%s: error:" % os.path.basename(__file__) + " only one '--git' argument allowed"
+    parser.print_usage(file=sys.stderr)
+    print >> sys.stderr, "%s: error:" % os.path.basename(__file__) + " only one '--git' argument allowed"
     exit(1)
 if git_args == 1:
     #If git is enabled, either -f or -t must be as well
     if folder_args == 0 and total_args == 0:
-        parser.print_usage()
-        print "%s: error:" % os.path.basename(__file__) + " '--git' can not be enabled without either '-f' or '-t'"
+        parser.print_usage(file=sys.stderr)
+        print >> sys.stderr, "%s: error:" % os.path.basename(__file__) +\
+                             " '--git' can not be enabled without either '-f' or '-t'"
         exit(1)
 if ignore_args > 1:
-    parser.print_usage()
-    print "%s: error:" % os.path.basename(__file__) + " only one '--ignore' argument allowed"
+    parser.print_usage(file=sys.stderr)
+    print >> sys.stderr, "%s: error:" % os.path.basename(__file__) + " only one '--ignore' argument allowed"
     exit(1)
 
 #Make sure the '-f' option always has at least 2 arguments (1 output folder and 1 source folder)
 if args.folder:
     for i in range(0, len(args.folder)):
         if len(args.folder[i]) < 2:
-            parser.print_usage()
-            print "%s: error:" % os.path.basename(__file__) + " '--folder' must have at least 2 arguments"
+            parser.print_usage(file=sys.stderr)
+            print >> sys.stderr, "%s: error:" % os.path.basename(__file__) +\
+                                 " '--folder' must have at least 2 arguments"
             exit(1)
 
 #Make sure the '-t' option always has at least 2 arguments (1 output file and 1 source folder)
 if args.total:
     for i in range(0, len(args.total)):
         if len(args.total[i]) < 2:
-            parser.print_usage()
-            print "%s: error:" % os.path.basename(__file__) + " '--total' must have at least 2 arguments"
+            parser.print_usage(file=sys.stderr)
+            print >> sys.stderr, "%s: error:" % os.path.basename(__file__) + " '--total' must have at least 2 arguments"
             exit(1)
 
 #Check if all source and output folders are valid
@@ -156,18 +158,20 @@ if args.folder:     # Check if '-f' was ever passed to the script
                 if args.folder[i][x][0] == "/" or args.folder[i][x][0] == "~":
                     #Check if the dirname of the output folder exists - we can create the last folder if it doesn't
                     if not os.path.isdir(os.path.expanduser(os.path.dirname(args.folder[i][x].rstrip("/")))):
-                        parser.print_usage()
-                        print "%s: error:" % os.path.basename(__file__) +\
-                              (" '%s' is not a valid path " % os.path.dirname(args.folder[i][x].rstrip("/")) +
-                               "for an output folder")
+                        parser.print_usage(file=sys.stderr)
+                        print >> sys.stderr, "%s: error:" % os.path.basename(__file__) +\
+                                             (" '%s' is not a valid path " %
+                                              os.path.dirname(args.folder[i][x].rstrip("/")) +
+                                              "for an output folder")
                         exit(1)
             else:
                 if not args.ignore:     # Make sure we weren't specifically told to ignore non-existent source folders
                     #Check if the source folder exists
                     if not os.path.isdir(os.path.expanduser(args.folder[i][x])):
-                        parser.print_usage()
-                        print "%s: error:" % os.path.basename(__file__) + (" '%s' is not a valid path for a "
-                                                                           "source folder" % args.folder[i][x])
+                        parser.print_usage(file=sys.stderr)
+                        print >> sys.stderr, "%s: error:" % os.path.basename(__file__) +\
+                                             (" '%s' is not a valid path for a "
+                                              "source folder" % args.folder[i][x])
                         exit(1)
 
 #Check if all -t options are valid
@@ -177,35 +181,38 @@ if args.total:
             if x == 0:  # args.total[i][0] is always the output file (ex: -t total /etc /var OR -t ~/total /etc /var)
                 #Make sure that the user is giving us a file instead of a dir
                 if args.total[i][x][-1] == "/" or args.total[i][x][-1] == ".":
-                    parser.print_usage()
-                    print "%s: error:" % os.path.basename(__file__) +\
-                          " '%s' is a dir, when we are expecting a filename or file path" % args.total[i][x]
+                    parser.print_usage(file=sys.stderr)
+                    print >> sys.stderr, "%s: error:" % os.path.basename(__file__) +\
+                                         " '%s' is a dir, when we are expecting a filename or file path" %\
+                                         args.total[i][x]
                     exit(1)
 
                 #Make sure that the user is not giving us an existing directory
                 if os.path.isdir(os.path.expanduser(args.total[i][x])):
-                    parser.print_usage()
-                    print "%s: error:" % os.path.basename(__file__) +\
-                          " '%s' is an existing dir, when we are expecting a filename or file path" % args.total[i][x]
+                    parser.print_usage(file=sys.stderr)
+                    print >> sys.stderr, "%s: error:" % os.path.basename(__file__) +\
+                                         " '%s' is an existing dir, when we are expecting a filename or file path" %\
+                                         args.total[i][x]
                     exit(1)
 
                 #The dirname does not need to exist if it doesn't start with / or ~
                 if args.total[i][x][0] == "/" or args.total[i][x][0] == "~":
                     #Check if the dirname of the output folder exists - we will create the file
                     if not os.path.isdir(os.path.expanduser(os.path.dirname(args.total[i][x].rstrip("/")))):
-                        parser.print_usage()
-                        print "%s: error:" % os.path.basename(__file__) +\
-                              (" '%s' is not a valid path " % os.path.dirname(args.total[i][x].rstrip("/")) +
-                              "for an output folder for --total")
+                        parser.print_usage(file=sys.stderr)
+                        print >> sys.stderr, "%s: error:" % os.path.basename(__file__) +\
+                                             (" '%s' is not a valid path "
+                                              % os.path.dirname(args.total[i][x].rstrip("/")) +
+                                              "for an output folder for --total")
                         exit(1)
             else:
                 if not args.ignore:     # Make sure we weren't specifically told to ignore non-existent folders
                     #Check if the source folder exists
                     if not os.path.isdir(os.path.expanduser(args.total[i][x])):
-                        parser.print_usage()
-                        print "%s: error:" % os.path.basename(__file__) +\
-                              (" '%s' is not a valid path " % args.total[i][x] +
-                              "for a source folder for --total")
+                        parser.print_usage(file=sys.stderr)
+                        print >> sys.stderr, "%s: error:" % os.path.basename(__file__) +\
+                                             (" '%s' is not a valid path " % args.total[i][x] +
+                                              "for a source folder for --total")
                         exit(1)
 
 #Check if git root folder is valid
@@ -220,12 +227,14 @@ if args.git:
                     GIT_VALID = True
                     break
             if not GIT_VALID:
-                parser.print_usage()
-                print "%s: error:" % os.path.basename(__file__) + " '%s' is an invalid path for a git repo" % args.git
+                parser.print_usage(file=sys.stderr)
+                print >> sys.stderr, "%s: error:" % os.path.basename(__file__) +\
+                                     " '%s' is an invalid path for a git repo" % args.git
                 exit(1)
         else:
-            parser.print_usage()
-            print "%s: error:" % os.path.basename(__file__) + " '%s' is an invalid path for a git repo" % args.git
+            parser.print_usage(file=sys.stderr)
+            print >> sys.stderr, "%s: error:" % os.path.basename(__file__) + " '%s' is an invalid path for a git repo"\
+                                                                             % args.git
             exit(1)
 
 #For every argument to -f, run tree on it and send it where it needs to go
@@ -236,19 +245,22 @@ if args.folder:
                 if not os.path.isdir(os.path.expanduser(args.folder[i][x])):    # If the output folder doesn't exist
                     #Make sure there isn't a file with the same name already there
                     if os.path.isfile(os.path.expanduser(args.folder[i][x])):
-                        parser.print_usage()
-                        print "%s: error:" % os.path.basename(__file__) + " unable to create '%s' output directory" %\
-                                                                          args.folder[i][x]
-                        print "%s: error: a file with that name already exists" % os.path.basename(__file__)
+                        parser.print_usage(file=sys.stderr)
+                        print >> sys.stderr, "%s: error:" % os.path.basename(__file__) +\
+                                             " unable to create '%s' output directory" %\
+                                             args.folder[i][x]
+                        print >> sys.stderr, "%s: error: a file with that name already exists" %\
+                                             os.path.basename(__file__)
                         exit(1)
 
                     try:
                         os.makedirs(os.path.expanduser(args.folder[i][x]))
                     except OSError:
-                        parser.print_usage()
-                        print "%s: error:" % os.path.basename(__file__) + " unable to create '%s' output directory" %\
-                                                                          args.folder[i][x]
-                        print "%s: error: check your permissions" % os.path.basename(__file__)
+                        parser.print_usage(file=sys.stderr)
+                        print >> sys.stderr, "%s: error:" % os.path.basename(__file__) +\
+                                             " unable to create '%s' output directory" %\
+                                             args.folder[i][x]
+                        print >> sys.stderr, "%s: error: check your permissions" % os.path.basename(__file__)
                         exit(1)
             else:   # For every source folder
                 if not os.path.isdir(os.path.expanduser(args.folder[i][x])):    # If the source folder doesn't exist
@@ -263,8 +275,8 @@ if args.folder:
                     open("%s/%s" % (os.path.expanduser(args.folder[i][0]),
                                     os.path.basename(args.folder[i][x].rstrip("/"))), 'w').write(output)
                 except (subprocess.CalledProcessError, OSError, IOError):
-                    parser.print_usage()
-                    print "%s: error:" % os.path.basename(__file__) + " error running the tree command"
+                    parser.print_usage(file=sys.stderr)
+                    print >> sys.stderr, "%s: error:" % os.path.basename(__file__) + " error running the tree command"
                     exit(1)
 
 #For every argument to -t, run du on it and send it where it needs to go
@@ -275,8 +287,9 @@ if args.total:
         try:
             f = open(args.total[i][0], "w")     # Immediately blanks out a file and prepares it for writing
         except IOError:
-            parser.print_usage()
-            print "%s: error:" % os.path.basename(__file__) + " failed to write to '%s'" % args.total[i][0]
+            parser.print_usage(file=sys.stderr)
+            print >> sys.stderr, "%s: error:" % os.path.basename(__file__) + " failed to write to '%s'" %\
+                                                                             args.total[i][0]
             exit(1)
 
         for x in range(0, len(args.total[i])):     # For every item in the current list
@@ -310,8 +323,9 @@ if args.git:
 
         #If it failed to create, exit
         if exit_code > 0:
-            parser.print_usage()
-            print "%s: error:" % os.path.basename(__file__) + " something went wrong when creating a git repo"
+            parser.print_usage(file=sys.stderr)
+            print >> sys.stderr, "%s: error:" % os.path.basename(__file__) +\
+                                 " something went wrong when creating a git repo"
             exit(1)
 
     subprocess.call(["git", "add", "."])
