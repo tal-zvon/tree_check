@@ -10,7 +10,8 @@ import time
 import signal
 
 
-def signal_handler(signal, frame):
+# noinspection PyUnusedLocal,PyUnusedLocal
+def signal_handler(kill_signal, frame):
     print   # Newline for formatting
     sys.exit(0)
 
@@ -18,7 +19,8 @@ def signal_handler(signal, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
-                                 usage=("\t%s (-f OUT_DIR SRC_DIR... | -t OUT_FILE SRC_DIR...)\n" % os.path.basename(__file__) +
+                                 usage=("\t%s (-f OUT_DIR SRC_DIR... | -t OUT_FILE SRC_DIR...)\n" %
+                                        os.path.basename(__file__) +
                                         "\t\t      [-g GIT_ROOT_DIR] [-i]\n" +
                                         "\t%s -h | --help\n" % os.path.basename(__file__) +
                                         "\t%s -e | --examples\n" % os.path.basename(__file__) +
