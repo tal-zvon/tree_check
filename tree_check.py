@@ -25,74 +25,105 @@ parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpForm
                                         "\t%s -h | --help\n" % os.path.basename(__file__) +
                                         "\t%s -e | --examples\n" % os.path.basename(__file__) +
                                         "\t%s -v | --version" % os.path.basename(__file__)),
-                                 description=('Run the "tree"'
-                                              ' command in a way that:\n'
-                                              '  * Makes the output easily grepable\n'
-                                              '  * Shows dir and file sizes in a human readable way\n'
-                                              'and write the output to a desired location.'),
-                                 epilog=("Exit Status:\n"
-                                         "\t0 if OK\n"
-                                         "\t1 if Errors caused an early exit\n\n"))
-parser.add_argument("-e", "--examples", action="store_true", help="show usage examples")
-parser.add_argument("-f", "--folder", metavar=("OUT_DIR", "SRC_DIR"), nargs="*", action="append",
-                    help=("specify output folder. Can be specified multiple times. The last folder in the OUT_DIR"
-                          " path will get created if it does not exist"))
-parser.add_argument("-g", "--git", metavar="GIT_ROOT_DIR",
-                    help=("enable git. Uses git to version control output after generating it. GIT_ROOT_DIR is the "
-                          "root of the git repo"))
-parser.add_argument("-i", "--ignore", action="store_true",
-                    help="ignore empty and non-existent input directories. Useful when dealing with mounted filesystems"
-                         " that may be unmounted once in a while when %s is running." % os.path.basename(__file__))
-parser.add_argument("-t", "--total", metavar=("OUT_FILE", "SRC_DIR"), nargs="*", action="append",
-                    help="create OUT_FILE with data about the total sizes of SRC_DIRs. Can be specified multiple times")
+                                 add_help=False)
+parser.add_argument("-e", "--examples", action="store_true")
+parser.add_argument("-f", "--folder", metavar=("OUT_DIR", "SRC_DIR"), nargs="*", action="append")
+parser.add_argument("-g", "--git", metavar="GIT_ROOT_DIR")
+parser.add_argument("-h", "--help", action="store_true")
+parser.add_argument("-i", "--ignore", action="store_true")
+parser.add_argument("-t", "--total", metavar=("OUT_FILE", "SRC_DIR"), nargs="*", action="append")
 parser.add_argument('-v', '--version', action='version', version=('%(prog)s ' + __version__))
 args = parser.parse_args()
+
+if args.help:
+    parser.print_usage()
+
+    print '''
+Run the "tree" command in a way that:
+    * Makes the output easily grepable
+    * Shows dir and file sizes in a human readable way
+and write the output to a desired location.
+
+Optional Arguments:
+    -h, --help          Show this help message and exit
+    -e, --examples      Show usage examples
+    -f OUT_DIR SRC_DIR..., --folder OUT_DIR SRC_DIR...
+                        Specify output folder. Can be specified multiple
+                        times. The last folder in the OUT_DIR path will get
+                        created if it does not exist
+    -g GIT_ROOT_DIR, --git GIT_ROOT_DIR
+                        Enable git. Uses git to version control output after
+                        generating it. GIT_ROOT_DIR is the root of the git
+                        repo
+    -i, --ignore        Ignore empty and non-existent input directories.
+                        Useful when dealing with mounted filesystems that may
+                        be unmounted once in a while when %s is
+                        running.
+    -t OUT_FILE SRC_DIR..., --total OUT_FILE SRC_DIR...
+                        Create OUT_FILE with data about the total sizes of
+                        SRC_DIRs. Can be specified multiple times
+    -v, --version       Show program's version number and exit
+
+Exit Status:
+    0 if OK
+    1 if Errors caused an early exit''' % os.path.basename(__file__)
+    exit(0)
 
 #If examples arg passed, show help with examples and exit
 if args.examples:
     print subprocess.check_output([sys.argv[0], '-h']),
-    print "\nExamples:"
-    print "\tRun tree on /etc, and put the output into the current folder:"
-    print "\t\t$ %s -f . /etc\n" % os.path.basename(__file__)
-    print "\tRun tree on /etc, and put the output into a folder called PC1:"
-    print "\tNote: Folder 'PC1' is created automatically"
-    print "\t\t$ %s -f PC1 /etc\n" % os.path.basename(__file__)
-    print "\tRun tree on /etc, and put the output into the current folder."
-    print "\tAlso run tree on '/SOME FOLDER' and put the output into the folder"
-    print "\tcalled 'Machine 2':"
-    print "\tNote: Folder 'Machine 2' is created automatically"
-    print "\t\t$ %s -f . /etc -f Machine\ 2 /SOME\ FOLDER" % os.path.basename(__file__)
-    print "\t\tOR"
-    print "\t\t$ %s -f . /etc -f 'Machine 2' '/SOME FOLDER'\n" % os.path.basename(__file__)
-    print "\tRun tree on /etc, and put the output into the current folder."
-    print "\tThen run tree on /var and /usr, and put the output of both into"
-    print "\ta folder called PC1."
-    print "\tFinally run tree on /home, and put the output into the current"
-    print "\tfolder too:"
-    print "\tNote: Folder 'PC1' is created automatically"
-    print "\t\t$ %s -f . /etc -f PC1 /var /usr -f . /home\n" % os.path.basename(__file__)
-    print "\tRun tree on /etc, and make the output folder"
-    print "\t'/home/user/test folder/Machine 1'."
-    print "\tRun tree on /var, and make the output folder"
-    print "\t'/home/user/test folder/Machine 2'."
-    print "\tSet the git repo root folder to '/home/user/test folder/',"
-    print "\tand make a git snapshot."
-    print "\tNote: In this case, the '/home/user/test folder/'"
-    print "\t  dir must already exist, while the 'Machine 1' and 'Machine 2' "
-    print "\t  folders are created automatically"
-    print "\t\t$ %s -f '/home/user/test folder/Machine 1' \\" % os.path.basename(__file__)
-    print "\t\t    /etc -f '/home/user/test folder/Machine 2' /var \\"
-    print "\t\t    -g '/home/user/test folder'\n"
-    print "\tRun 'du -hcs' on /etc and /var, and put the output in a "
-    print "\tfile called 'etc_var_totals'."
-    print "\tAlso run 'du -hcs' on /home and /usr and put the output "
-    print "\tin a file called 'home_usr_totals'."
-    print "\tThen make a git snapshot of the output folder:"
-    print "\t\t$ %s -t etc_var_totals /etc /var \\" % os.path.basename(__file__)
-    print "\t\t    -t home_usr_totals /home /usr -g .\n"
-    print "\tRun tree on '/etc', and run 'du -hcs' on /var before taking a "
-    print "\tsnapshot of the output folder with git:"
-    print "\t\t$ %s -f . /etc -t totals /var -g ." % os.path.basename(__file__)
+    print """
+Examples:
+    Run tree on /etc, and put the output into the current folder:
+        $ %s -f . /etc
+
+    Run tree on /etc, and put the output into a folder called PC1:
+    Note: Folder 'PC1' is created automatically
+        $ %s -f PC1 /etc
+
+    Run tree on /etc, and put the output into the current folder.
+    Also run tree on '/SOME FOLDER' and put the output into the folder
+    called 'Machine 2':
+    Note: Folder 'Machine 2' is created automatically
+        $ %s -f . /etc -f Machine\ 2 /SOME\ FOLDER
+        OR
+        $ %s -f . /etc -f 'Machine 2' '/SOME FOLDER'
+
+    Run tree on /etc, and put the output into the current folder.
+    Then run tree on /var and /usr, and put the output of both into
+    a folder called PC1.
+    Finally run tree on /home, and put the output into the current
+    folder too:
+    Note: Folder 'PC1' is created automatically
+        $ %s -f . /etc -f PC1 /var /usr -f . /home
+
+    Run tree on /etc, and make the output folder
+    '/home/user/test folder/Machine 1'.
+    Run tree on /var, and make the output folder
+    '/home/user/test folder/Machine 2'.
+    Set the git repo root folder to '/home/user/test folder/',
+    and make a git snapshot.
+    Note: In this case, the '/home/user/test folder/'
+      dir must already exist, while the 'Machine 1' and 'Machine 2'
+      folders are created automatically
+        $ %s -f '/home/user/test folder/Machine 1' \\
+            /etc -f '/home/user/test folder/Machine 2' /var \\
+            -g '/home/user/test folder'
+
+    Run 'du -hcs' on /etc and /var, and put the output in a
+    file called 'etc_var_totals'.
+    Also run 'du -hcs' on /home and /usr and put the output
+    in a file called 'home_usr_totals'.
+    Then make a git snapshot of the output folder:
+        $ %s -t etc_var_totals /etc /var \\
+            -t home_usr_totals /home /usr -g .
+
+    Run tree on '/etc', and run 'du -hcs' on /var before taking a
+    snapshot of the output folder with git:
+        $ %s -f . /etc -t totals /var -g .""" % (os.path.basename(__file__), os.path.basename(__file__),
+                                                 os.path.basename(__file__), os.path.basename(__file__),
+                                                 os.path.basename(__file__), os.path.basename(__file__),
+                                                 os.path.basename(__file__), os.path.basename(__file__))
     exit(0)
 
 #If no arguments are given, give warning and exit
