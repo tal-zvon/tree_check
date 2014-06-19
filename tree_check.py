@@ -288,7 +288,7 @@ if args.total:
 
             #Check if source folder exists (it may not if -i was used)
             if os.path.isdir(os.path.expanduser(args.total[i][x])):
-                f.write(subprocess.Popen("du -hcs %s/*" % os.path.expanduser(args.total[i][x]).rstrip("/"),
+                f.write(subprocess.Popen("du -hcs '%s'/*" % os.path.expanduser(args.total[i][x]).rstrip("/"),
                                          shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                          stderr=subprocess.STDOUT, close_fds=True).stdout.read())
             else:
