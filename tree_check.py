@@ -310,37 +310,60 @@ if args.folder:
                     print >> sys.stderr, "%s: error:" % os.path.basename(__file__) + " error running the tree command"
                     exit(1)
 
-#For every argument to -t, run du on it and send it where it needs to go
 if args.total:
-    for i in range(0, len(args.total)):     # For every list in args.total
-        f = ''  # File handle
-        #Open output file for writing
-        try:
-            f = open(args.total[i][0], "w")     # Immediately blanks out a file and prepares it for writing
-        except IOError:
-            parser.print_usage(file=sys.stderr)
-            print >> sys.stderr, "%s: error:" % os.path.basename(__file__) + " failed to write to '%s'" %\
-                                                                             args.total[i][0]
-            exit(1)
+    for i in range(0, len(args.total)):     # For every -t option
+        File_Has_Been_Opened = False
+        Do_Not_Skip = False
+        #Find out if any of the source files for the current -t option have changed
+        for y in range(1, len(args.total[i])):     # For every argument to current -t, except the first (output file)
+            #Check if the current argument is an existing directory, and is not empty
+            if os.path.isdir(os.path.expanduser(args.total[i][y])) and os.listdir(os.path.expanduser(args.total[i][y])):
+                Do_Not_Skip = True
+                break
 
-        for x in range(0, len(args.total[i])):     # For every item in the current list
-            if x == 0:  # Skip the first argument to every -t (the output file)
-                continue
+        for x in range(1, len(args.total[i])):  # For every argument to current -t, except the first (output file)
+            #Open file if we're not ignoring empty/non-existent files, or
+            #if at least some of the SRC_DIRs for the current output file have changed
+            if not args.ignore or (args.ignore and Do_Not_Skip):
+                try:
+                    if not File_Has_Been_Opened:
+                        f = open(args.total[i][0], "w")     # Open file for writing, and blank it out
+                        File_Has_Been_Opened = True
+                    else:
+                        f = open(args.total[i][0], "a")     # Opens file for appending
+                except IOError:
+                    parser.print_usage(file=sys.stderr)
+                    print >> sys.stderr, "%s: error:" % os.path.basename(__file__) + " failed to write to '%s'" %\
+                                                                                     args.total[i][0]
+                    exit(1)
 
-            f.write(os.path.expanduser(args.total[i][x]) + '\n')
-            f.write("=" * len(os.path.expanduser(args.total[i][x])) + '\n')
+            if args.ignore:
+                if Do_Not_Skip:
+                    f.write(os.path.expanduser(args.total[i][x]) + '\n')
+                    f.write("=" * len(os.path.expanduser(args.total[i][x])) + '\n')
 
-            #Check if source folder exists (it may not if -i was used)
-            if os.path.isdir(os.path.expanduser(args.total[i][x])):
+                    if not os.path.isdir(os.path.expanduser(args.total[i][x])):
+                        f.write("'%s' does not exist" % os.path.expanduser(args.total[i][x]))
+                    elif not os.listdir(os.path.expanduser(args.total[i][x])):
+                        f.write("'%s' is empty" % os.path.expanduser(args.total[i][x]))
+                    else:
+                        f.write(subprocess.Popen("du -hcs '%s'/*" % os.path.expanduser(args.total[i][x]).rstrip("/"),
+                                                 shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                                 stderr=subprocess.STDOUT, close_fds=True).stdout.read())
+
+                    f.write('\n\n')
+                    f.close()
+                else:
+                    break   # Skip current -t source file - other than empty and non-existent folders, there's no change
+            else:
+                f.write(os.path.expanduser(args.total[i][x]) + '\n')
+                f.write("=" * len(os.path.expanduser(args.total[i][x])) + '\n')
+
                 f.write(subprocess.Popen("du -hcs '%s'/*" % os.path.expanduser(args.total[i][x]).rstrip("/"),
                                          shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                          stderr=subprocess.STDOUT, close_fds=True).stdout.read())
-            else:
-                f.write("'%s' not found" % os.path.expanduser(args.total[i][x]))
-
-            f.write('\n\n')
-
-        f.close()
+                f.write('\n\n')
+                f.close()
 
 #If git is enabled, start a new repo (if necessary), add files and commit
 if args.git:
