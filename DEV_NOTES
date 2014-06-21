@@ -55,3 +55,13 @@ which would result in 2 files:
 
 but that might be confusing to people, and would be a pain to check for invalid input (wrong number of brackets, wrong position of brackets, no group name before the brackets, etc.).
 Unless I figure out a simpler way to do this in the future, I'm leaving it as is.
+
+==========================================================
+
+If 2 source folders are given with the same basename, the second will override
+the first. Ex:
+
+	-f . /bin /usr/bin
+
+Solution: Have a warning that shows up in such cases, unless -i is given
+		Note: Does -i need to disable the warning? Is there any situation where you would want the second file to override the first?
