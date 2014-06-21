@@ -55,18 +55,21 @@ Optional Arguments:
                         Enable git. Uses git to version control output after
                         generating it. GIT_ROOT_DIR is the root of the git
                         repo
-    -i, --ignore        Ignore empty and non-existent input directories.
+    -i, --ignore        Ignore empty and non-existent source directories.
                         Useful when dealing with mounted filesystems that may
                         be unmounted once in a while when %s is
-                        running.
+                        running
     -t OUT_FILE SRC_DIR..., --total OUT_FILE SRC_DIR...
                         Create OUT_FILE with data about the total sizes of
-                        SRC_DIRs. Can be specified multiple times
+                        SRC_DIRs. Can be specified multiple times. If -i flag
+                        is used, %s checks if the current OUT_FILE
+                        has any changes besides the empty/non-existent dirs.
+                        If there are none, it ignores the OUT_FILE completely.
     -v, --version       Show program's version number and exit
 
 Exit Status:
     0 if OK
-    1 if Errors caused an early exit''' % os.path.basename(__file__)
+    1 if Errors caused an early exit''' % (os.path.basename(__file__), os.path.basename(__file__))
     exit(0)
 
 #If examples arg passed, show help with examples and exit
