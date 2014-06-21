@@ -1,0 +1,57 @@
+while -t works fine, it doesn't have the fine level of control that I originally wanted
+
+currently it takes 2 groups of inputs:
+
+	-t INPUT_FILE_1 ... -t INPUT_FILE_2 ...
+	AND
+	-t ... SOURCE_FILE_1 SOURCE_FILE_2
+
+what I want it to do is have 3 groups:
+
+	1. The output file
+	2. A group (what is currently underlined with ========== in the output file)
+	3. The source folders that go into each group
+
+unfortunately, I am not aware of any simple way to have 3 groups of arguments on the command line
+I could always hack together a solution, like:
+	-t Totals NAS_1 (/media/NAS_1/Photos /mnt/Movies /media/NAS_1/TV) NAS_2 (/media/NAS_2/Photos /home/user/Desktop/some_mount_point /some_other_mount_point) \
+		-t Totals_2 NAS_3 (/media/NAS_3/Photos /some_mount_point_from_NAS_3 /some_other_mount_point_from_NAS_3) NAS_4 (/some/new/mount/point /and/another/one)
+
+which would result in 2 files:
+
+	Totals:
+		NAS_1
+		=====
+
+		$(du -hcs /media/NAS_1/Photos) output
+
+		$(du -hcs /mnt/Movies) output
+
+		$(du -hcs /media/NAS_1_TV) output
+
+		NAS_2
+		=====
+
+		$(du -hcs /media/NAS_2/Photos) output
+
+		$(du -hcs /home/user/Desktop/some_mount_point) output
+
+		$(du -hcs /some_other_mount_point) output
+
+	Totals_2
+
+		NAS_3
+		=====
+
+		$(du -hcs /media/NAS_3/Photos) output
+		$du -hcs /some_mount_point_from_NAS_3) output
+		$(du -hcs /some_other_mount_point_from_NAS_3) output
+
+		NAS_4
+		=====
+
+		$(du -hcs /some/new/mount/point) output
+		$(du -hcs /and/another/one) output
+
+but that might be confusing to people, and would be a pain to check for invalid input (wrong number of brackets, wrong position of brackets, no group name before the brackets, etc.).
+Unless I figure out a simpler way to do this in the future, I'm leaving it as is.
